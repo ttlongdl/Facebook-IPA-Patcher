@@ -22,6 +22,15 @@ jobs:
       - name: Install insert_dylib
         run: brew install insert_dylib
 
+      - name: Unpack pinned golden assets
+        run: |
+          rm -rf assets
+          unzip -q golden-assets.zip
+          test -f assets/FacebookPlus.dylib
+          test -d assets/FacebookPlus.bundle
+          test -f assets/FBAudioFix-v0.3.14.dylib
+          test -d assets/OpenInFacebookSafariExtension.appex
+
       - name: Get clean IPA
         env:
           GH_TOKEN: ${{ github.token }}
