@@ -34,8 +34,13 @@ ditto assets/FacebookPlus.bundle "$APP/FacebookPlus.bundle"
 cp assets/FacebookPlus.dylib "$FRAMEWORKS/FacebookPlus.dylib"
 cp assets/FBAudioFix-v0.3.14.dylib "$FRAMEWORKS/FBAudioFix-v0.3.14.dylib"
 
-TARGET="$FRAMEWORKS/FBSharedFramework"
-test -f "$TARGET"
+TARGET="$(find "$FRAMEWORKS" -type f -name 'FBSharedFramework' -print -quit)"
+if [ -z "$TARGET" ]; then
+  echo "ERROR: FBSharedFramework binary not found under $FRAMEWORKS" >&2
+  find "$FRAMEWORKS" -maxdepth 3 -print
+  exit 1
+fi
+echo "Injection target: $TARGET"
 
 inject_if_missing() {
   local dylib="$1"
