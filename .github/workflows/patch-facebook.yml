@@ -3,8 +3,13 @@ name: Patch Facebook IPA
 on:
   workflow_dispatch:
     inputs:
+      release_tag:
+        description: "Release tag containing the clean TrollDecrypt IPA"
+        required: false
+        default: "fb-579-test"
+        type: string
       ipa_url:
-        description: "Direct URL to clean TrollDecrypt IPA (optional if release asset triggers workflow)"
+        description: "Optional direct IPA URL; release_tag is preferred"
         required: false
         type: string
   release:
@@ -35,14 +40,20 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           IPA_URL: ${{ inputs.ipa_url }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
         run: |
           set -euo pipefail
+          mkdir -p input
           if [ "${{ github.event_name }}" = "release" ]; then
-            gh release download "${{ github.event.release.tag_name }}" --pattern '*.ipa' --dir input
-          else
-            test -n "$IPA_URL"
-            mkdir -p input
+            RELEASE_TAG="${{ github.event.release.tag_name }}"
+            gh release download "$RELEASE_TAG" --pattern '*.ipa' --dir input
+            echo "TARGET_RELEASE=$RELEASE_TAG" >> "$GITHUB_ENV"
+          elif [ -n "$IPA_URL" ]; then
             curl -fL "$IPA_URL" -o input/Facebook-clean.ipa
+          else
+            test -n "$RELEASE_TAG"
+            gh release download "$RELEASE_TAG" --pattern '*.ipa' --dir input
+            echo "TARGET_RELEASE=$RELEASE_TAG" >> "$GITHUB_ENV"
           fi
           IPA="$(find input -type f -name '*.ipa' -print -quit)"
           test -n "$IPA"
@@ -64,7 +75,7 @@ jobs:
           compression-level: 0
 
       - name: Attach patched IPA to release
-        if: github.event_name == 'release'
+        if: env.TARGET_RELEASE != ''
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${{ github.event.release.tag_name }}" "$OUTPUT_IPA" --clobber
+        run: gh release upload "$TARGET_RELEASE" "$OUTPUT_IPA" --clobber
