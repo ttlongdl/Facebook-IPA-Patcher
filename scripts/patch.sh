@@ -38,10 +38,11 @@ mkdir -p "$PLUGINS"
 ditto assets/safari/OpenInFacebookSafariExtension.appex "$PLUGINS/OpenInFacebookSafariExtension.appex"
 
 # Hard guard: the packaged app must contain exactly one .appex.
-mapfile -t APPEXES < <(find "$PLUGINS" -maxdepth 1 -type d -name '*.appex' -print)
-if [ "${#APPEXES[@]}" -ne 1 ] || [ "$(basename "${APPEXES[0]:-}")" != "OpenInFacebookSafariExtension.appex" ]; then
+APPEX_COUNT="$(find "$PLUGINS" -maxdepth 1 -type d -name '*.appex' | wc -l | tr -d ' ')"
+ONLY_APPEX="$(find "$PLUGINS" -maxdepth 1 -type d -name '*.appex' -print -quit)"
+if [ "$APPEX_COUNT" -ne 1 ] || [ "$(basename "$ONLY_APPEX")" != "OpenInFacebookSafariExtension.appex" ]; then
   echo "ERROR: expected only OpenInFacebookSafariExtension.appex under PlugIns" >&2
-  printf '%s\n' "${APPEXES[@]:-}" >&2
+  find "$PLUGINS" -maxdepth 1 -type d -name '*.appex' -print >&2 || true
   exit 1
 fi
 
