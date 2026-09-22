@@ -17,5 +17,6 @@ out=subprocess.check_output(['otool','-L',target],text=True)
 assert '@executable_path/Frameworks/FacebookPlus.dylib' in out
 plus=os.path.join(app,'Frameworks','FacebookPlus.dylib')
 plus_out=subprocess.check_output(['otool','-L',plus],text=True)
-assert '@executable_path/Frameworks/FBAudioFix-v0.3.14.dylib' in plus_out
-print('Verification OK: FBSharedFramework -> FacebookPlus -> FBAudioFix')
+assert '@executable_path/Frameworks/FBAudioFix-v0.3.14.dylib' not in plus_out
+assert os.path.exists(os.path.join(app,'Frameworks','FBAudioFix-v0.3.14.dylib'))
+print('Verification OK: FacebookPlus loaded; AudioFix packaged but not loaded')
