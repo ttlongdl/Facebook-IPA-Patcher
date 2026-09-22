@@ -52,26 +52,39 @@ inject_if_missing() {
   fi
 
   echo ">>> Inject START: $dylib"
-  # insert_dylib can hang on malformed/exhausted Mach-O headers. Kill it
-  # deterministically so the workflow produces a useful failure instead of
-  # burning the runner indefinitely.
+  # Run insert_dylib in its own process group. Some failure paths can leave a
+  # descendant holding stdout open, so subprocess.run(timeout=...) alone is
+  # insufficient. Kill the entire process group after 30 seconds.
   python3 - "$load" "$TARGET" <<'PY'
-import subprocess, sys
+import os, signal, subprocess, sys, time
+
 load, target = sys.argv[1], sys.argv[2]
-try:
-    p = subprocess.run(
-        ["insert_dylib", "--inplace", "--no-strip-codesig", load, target],
-        text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-        timeout=30,
-    )
-except subprocess.TimeoutExpired as e:
-    if e.stdout:
-        print(e.stdout if isinstance(e.stdout, str) else e.stdout.decode(errors="replace"))
-    print(f"ERROR: insert_dylib timed out after 30s for {load}", file=sys.stderr)
+p = subprocess.Popen(
+    ["insert_dylib", "--inplace", "--no-strip-codesig", load, target],
+    stdout=subprocess.PIPE,
+    stderr=subprocess.STDOUT,
+    text=True,
+    start_new_session=True,
+)
+
+deadline = time.monotonic() + 30
+while p.poll() is None and time.monotonic() < deadline:
+    time.sleep(0.2)
+
+if p.poll() is None:
+    print(f"ERROR: insert_dylib hung for 30s: {load}", file=sys.stderr, flush=True)
+    os.killpg(p.pid, signal.SIGKILL)
+    try:
+        out, _ = p.communicate(timeout=5)
+    except subprocess.TimeoutExpired:
+        out = ""
+    if out:
+        print(out, end="" if out.endswith("\n") else "\n")
     sys.exit(124)
 
-if p.stdout:
-    print(p.stdout, end="" if p.stdout.endswith("\\n") else "\\n")
+out, _ = p.communicate()
+if out:
+    print(out, end="" if out.endswith("\n") else "\n")
 if p.returncode != 0:
     print(f"ERROR: insert_dylib exited {p.returncode} for {load}", file=sys.stderr)
     sys.exit(p.returncode)
