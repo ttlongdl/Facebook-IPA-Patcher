@@ -56,9 +56,19 @@ assert not bad, 'libroot dependency remains in: ' + ', '.join(bad)
 # AudioFix/DeepLinkBridge are integrated into FacebookPlus.dylib.
 assert not os.path.exists(os.path.join(frameworks, 'FBAudioFix-v0.3.14.dylib'))
 
+# SideStore/free-account build must carry exactly one extension: our Safari bridge.
+plugins = os.path.join(app, 'PlugIns')
+appexes = []
+if os.path.isdir(plugins):
+    appexes = sorted(
+        name for name in os.listdir(plugins)
+        if name.endswith('.appex') and os.path.isdir(os.path.join(plugins, name))
+    )
+assert appexes == ['OpenInFacebookSafariExtension.appex'], appexes
+
 ext_plist = os.path.join(appex, 'Info.plist')
 with open(ext_plist, 'rb') as f:
     ext = plistlib.load(f)
 assert ext.get('NSExtension', {}).get('NSExtensionPointIdentifier') == 'com.apple.Safari.web-extension'
 
-print('Verification OK: Plus 1.0.1-3 is libroot-free, cyan main injection present, substrate embedded, fbbridge + Safari extension installed')
+print('Verification OK: Plus 1.0.1-3 is libroot-free, cyan main injection present, substrate embedded, only the Safari bridge extension retained')
