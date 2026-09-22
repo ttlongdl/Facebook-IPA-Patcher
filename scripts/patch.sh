@@ -17,102 +17,70 @@ mkdir -p "$FRAMEWORKS" "$PLUGINS"
 
 echo "App: $APP"
 
-# Remove TrollFools backup files left in Frameworks.
-find "$FRAMEWORKS" -type f \( -name '*.bak' -o -name '*.backup' \) -print -delete || true
+# Remove TrollFools leftovers anywhere inside the app, including the literal
+# troll-fools-backup naming used by some injection paths.
+find "$APP" \( -iname '*troll-fools-backup*' -o -iname '*.bak' -o -iname '*.backup' \) -print -exec rm -rf {} + 2>/dev/null || true
 
-# Remove device whitelist and register the proven fbbridge:// URL scheme.
-/usr/libexec/PlistBuddy -c 'Delete :UISupportedDevices' "$PLIST" 2>/dev/null || true
+# Remove device whitelist and register fbbridge://.
 python3 scripts/patch_plist.py "$PLIST"
 
-# Replace Safari extension with pinned golden clean build.
+# Install the clean Safari Web Extension.
 rm -rf "$PLUGINS/OpenInFacebookSafariExtension.appex"
-ditto assets/OpenInFacebookSafariExtension.appex "$PLUGINS/OpenInFacebookSafariExtension.appex"
+ditto assets/safari/OpenInFacebookSafariExtension.appex "$PLUGINS/OpenInFacebookSafariExtension.appex"
 
-# Copy pinned resource bundle. Dylibs are injected with insert_dylib below.
+# Install the v1.0.1-2 injection payload. AudioFix + DeepLinkBridge are already
+# integrated in this FacebookPlus build, so there is no second AudioFix dylib.
 rm -rf "$APP/FacebookPlus.bundle"
-ditto assets/FacebookPlus.bundle "$APP/FacebookPlus.bundle"
-cp assets/FacebookPlus.dylib "$FRAMEWORKS/FacebookPlus.dylib"
-cp assets/FBAudioFix-v0.3.14.dylib "$FRAMEWORKS/FBAudioFix-v0.3.14.dylib"
+ditto assets/injection/FacebookPlus.bundle "$APP/FacebookPlus.bundle"
+cp assets/injection/FacebookPlus.dylib "$FRAMEWORKS/FacebookPlus.dylib"
 
 TARGET="$(find "$FRAMEWORKS" -type f -name 'FBSharedFramework' -print -quit)"
 if [ -z "$TARGET" ]; then
   echo "ERROR: FBSharedFramework binary not found under $FRAMEWORKS" >&2
-  find "$FRAMEWORKS" -maxdepth 3 -print
   exit 1
 fi
 echo "Injection target: $TARGET"
 
-inject_if_missing() {
-  local dylib="$1"
-  local load="@executable_path/Frameworks/$dylib"
-
-  if otool -L "$TARGET" | grep -Fq "$load"; then
-    echo "Already injected: $load"
-    return 0
-  fi
-
-  echo ">>> Inject START: $dylib"
-  # Run insert_dylib in its own process group. Some failure paths can leave a
-  # descendant holding stdout open, so subprocess.run(timeout=...) alone is
-  # insufficient. Kill the entire process group after 30 seconds.
-  python3 - "$load" "$TARGET" <<'PY'
+LOAD="@executable_path/Frameworks/FacebookPlus.dylib"
+if otool -L "$TARGET" | grep -Fq "$LOAD"; then
+  echo "Already injected: $LOAD"
+else
+  python3 - "$LOAD" "$TARGET" <<'PY'
 import os, signal, subprocess, sys, time
-
 load, target = sys.argv[1], sys.argv[2]
 p = subprocess.Popen(
     ["insert_dylib", "--inplace", "--no-strip-codesig", load, target],
-    stdout=subprocess.PIPE,
-    stderr=subprocess.STDOUT,
-    text=True,
+    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
     start_new_session=True,
 )
-
 deadline = time.monotonic() + 30
 while p.poll() is None and time.monotonic() < deadline:
     time.sleep(0.2)
-
 if p.poll() is None:
-    print(f"ERROR: insert_dylib hung for 30s: {load}", file=sys.stderr, flush=True)
     os.killpg(p.pid, signal.SIGKILL)
-    try:
-        out, _ = p.communicate(timeout=5)
-    except subprocess.TimeoutExpired:
-        out = ""
-    if out:
-        print(out, end="" if out.endswith("\n") else "\n")
-    sys.exit(124)
-
+    out, _ = p.communicate()
+    if out: print(out)
+    raise SystemExit("ERROR: insert_dylib timed out")
 out, _ = p.communicate()
-if out:
-    print(out, end="" if out.endswith("\n") else "\n")
-if p.returncode != 0:
-    print(f"ERROR: insert_dylib exited {p.returncode} for {load}", file=sys.stderr)
-    sys.exit(p.returncode)
+if out: print(out, end="" if out.endswith("\n") else "\n")
+if p.returncode:
+    raise SystemExit(p.returncode)
 PY
-  echo ">>> Inject DONE: $dylib"
+fi
 
-  if ! otool -L "$TARGET" | grep -Fq "$load"; then
-    echo "ERROR: load command missing after injection: $load" >&2
-    exit 1
-  fi
+otool -L "$TARGET" | grep -Fq "$LOAD" || {
+  echo "ERROR: FacebookPlus load command missing after injection" >&2
+  exit 1
 }
 
-inject_if_missing "FacebookPlus.dylib"
-echo "FacebookPlus load command verified in FBSharedFramework."
-
-# Do not chain AudioFix as a Mach-O dependency of FacebookPlus: the resulting
-# app launches with a dyld crash. Keep the known-good AudioFix dylib in the
-# package for now, but do not load it until we have a safe loader strategy.
-echo "AudioFix copied but intentionally NOT loaded (safe build)."
-
-# Verify the exact golden ingredients before packaging.
 python3 scripts/verify.py "$APP"
 
-VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$PLIST" 2>/dev/null || echo unknown)"
-OUT="$PWD/Facebook-${VERSION}-Plus-DeepLink-AudioFix.ipa"
+VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$PLIST")"
+test -n "$VERSION"
+OUT="$PWD/FB $VERSION Plus Plus.ipa"
 rm -f "$OUT"
 (
   cd "$ROOT"
   zip -qry "$OUT" Payload
 )
-echo "OUTPUT=$OUT"
+echo "Built: $OUT"
