@@ -12,8 +12,10 @@ required=[
  os.path.join(app,'PlugIns','OpenInFacebookSafariExtension.appex'),
 ]
 for x in required: assert os.path.exists(x), x
-target=os.path.join(app,'Frameworks','FBSharedFramework')
+target=os.path.join(app,'Frameworks','FBSharedFramework.framework','FBSharedFramework')
 out=subprocess.check_output(['otool','-L',target],text=True)
 assert '@executable_path/Frameworks/FacebookPlus.dylib' in out
-assert '@executable_path/Frameworks/FBAudioFix-v0.3.14.dylib' in out
-print('Verification OK')
+plus=os.path.join(app,'Frameworks','FacebookPlus.dylib')
+plus_out=subprocess.check_output(['otool','-L',plus],text=True)
+assert '@executable_path/Frameworks/FBAudioFix-v0.3.14.dylib' in plus_out
+print('Verification OK: FBSharedFramework -> FacebookPlus -> FBAudioFix')
