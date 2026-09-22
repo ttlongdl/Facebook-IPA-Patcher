@@ -1,19 +1,12 @@
-name: Patch Facebook IPA
+name: Build Facebook Plus Plus IPA
 
 on:
   workflow_dispatch:
     inputs:
-      release_tag:
-        description: "Release tag containing the clean TrollDecrypt IPA"
-        required: false
-        default: "fb-579-test"
-        type: string
       ipa_url:
-        description: "Optional direct IPA URL; release_tag is preferred"
-        required: false
+        description: "Direct download URL to a clean Facebook IPA"
+        required: true
         type: string
-  release:
-    types: [published]
 
 permissions:
   contents: write
@@ -26,6 +19,7 @@ jobs:
 
       - name: Install insert_dylib
         run: |
+          set -euo pipefail
           git clone --depth 1 https://github.com/Tyilo/insert_dylib.git "$RUNNER_TEMP/insert_dylib"
           cd "$RUNNER_TEMP/insert_dylib"
           DERIVED="$RUNNER_TEMP/insert_dylib-build"
@@ -36,55 +30,68 @@ jobs:
           cp "$BIN" "$HOME/.local/bin/insert_dylib"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-      - name: Unpack pinned golden assets
-        run: |
-          rm -rf assets
-          unzip -q golden-assets.zip
-          test -f assets/FacebookPlus.dylib
-          test -d assets/FacebookPlus.bundle
-          test -f assets/FBAudioFix-v0.3.14.dylib
-          test -d assets/OpenInFacebookSafariExtension.appex
-
-      - name: Get clean IPA
+      - name: Download clean Facebook IPA
         env:
-          GH_TOKEN: ${{ github.token }}
           IPA_URL: ${{ inputs.ipa_url }}
-          RELEASE_TAG: ${{ inputs.release_tag }}
         run: |
           set -euo pipefail
           mkdir -p input
-          if [ "${{ github.event_name }}" = "release" ]; then
-            RELEASE_TAG="${{ github.event.release.tag_name }}"
-            gh release download "$RELEASE_TAG" --pattern '*.ipa' --dir input
-            echo "TARGET_RELEASE=$RELEASE_TAG" >> "$GITHUB_ENV"
-          elif [ -n "$IPA_URL" ]; then
-            curl -fL "$IPA_URL" -o input/Facebook-clean.ipa
-          else
-            test -n "$RELEASE_TAG"
-            gh release download "$RELEASE_TAG" --pattern '*.ipa' --dir input
-            echo "TARGET_RELEASE=$RELEASE_TAG" >> "$GITHUB_ENV"
-          fi
-          IPA="$(find input -type f -name '*.ipa' -print -quit)"
-          test -n "$IPA"
-          echo "INPUT_IPA=$IPA" >> "$GITHUB_ENV"
+          curl --fail --location --retry 3 --retry-delay 2 "$IPA_URL" -o input/Facebook-clean.ipa
+          unzip -tq input/Facebook-clean.ipa >/dev/null
+          echo "INPUT_IPA=$PWD/input/Facebook-clean.ipa" >> "$GITHUB_ENV"
 
-      - name: Patch IPA
+      - name: Download Facebook Plus injection v1.0.1-2
         run: |
+          set -euo pipefail
+          rm -rf assets/injection
+          mkdir -p assets/injection
+          curl --fail --location --retry 3             "https://github.com/ttlongdl/Facebook-Plus/releases/download/v1.0.1-2/FacebookPlus-v1.0.1-2-Injection.zip"             -o "$RUNNER_TEMP/FacebookPlus-Injection.zip"
+          unzip -q "$RUNNER_TEMP/FacebookPlus-Injection.zip" -d assets/injection
+          test -f assets/injection/FacebookPlus.dylib
+          test -d assets/injection/FacebookPlus.bundle
+
+      - name: Unpack Safari extension asset
+        run: |
+          set -euo pipefail
+          rm -rf assets/safari
+          mkdir -p assets/safari
+          unzip -q golden-assets.zip -d "$RUNNER_TEMP/golden"
+          ditto "$RUNNER_TEMP/golden/assets/OpenInFacebookSafariExtension.appex"                 assets/safari/OpenInFacebookSafariExtension.appex
+          test -f assets/safari/OpenInFacebookSafariExtension.appex/Info.plist
+
+      - name: Patch and verify IPA
+        run: |
+          set -euo pipefail
           chmod +x scripts/patch.sh
           scripts/patch.sh "$INPUT_IPA"
-          OUT="$(find "$PWD" -maxdepth 1 -type f -name 'Facebook-*-Plus-DeepLink-AudioFix.ipa' -print -quit)"
-          test -n "$OUT"
-          echo "OUTPUT_IPA=$OUT" >> "$GITHUB_ENV"
+          test -n "${OUTPUT_IPA:-}"
+        env:
+          GITHUB_ENV: ${{ github.env }}
 
-      - name: Upload artifact
+      - name: Resolve output
+        run: |
+          set -euo pipefail
+          OUT="$(find "$PWD" -maxdepth 1 -type f -name 'FB * Plus Plus.ipa' -print -quit)"
+          test -n "$OUT"
+          VERSION="$(basename "$OUT" | sed -E 's/^FB (.+) Plus Plus\.ipa$/\1/')"
+          echo "OUTPUT_IPA=$OUT" >> "$GITHUB_ENV"
+          echo "FB_VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "RELEASE_TAG=fb-$VERSION-plus-plus" >> "$GITHUB_ENV"
+
+      - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Patched-Facebook-IPA
+          name: FB-${{ env.FB_VERSION }}-Plus-Plus
           path: ${{ env.OUTPUT_IPA }}
           compression-level: 0
 
-      - name: Attach patched IPA to release
-        if: env.TARGET_RELEASE != ''
+      - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "$TARGET_RELEASE" "$OUTPUT_IPA" --clobber
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" "$OUTPUT_IPA" --clobber
+          else
+            gh release create "$RELEASE_TAG" "$OUTPUT_IPA"               --title "FB $FB_VERSION Plus Plus"               --notes "Facebook $FB_VERSION patched with Facebook Plus v1.0.1-2, fbbridge deep-link support, UISupportedDevices cleanup, TrollFools backup cleanup, and Open in Facebook Safari extension."
+          fi
