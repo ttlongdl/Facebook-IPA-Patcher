@@ -17,18 +17,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install insert_dylib
+      - name: Install cyan / pyzule-rw
         run: |
           set -euo pipefail
-          git clone --depth 1 https://github.com/Tyilo/insert_dylib.git "$RUNNER_TEMP/insert_dylib"
-          cd "$RUNNER_TEMP/insert_dylib"
-          DERIVED="$RUNNER_TEMP/insert_dylib-build"
-          xcodebuild -project insert_dylib.xcodeproj -scheme insert_dylib -configuration Release -derivedDataPath "$DERIVED"
-          BIN="$DERIVED/Build/Products/Release/insert_dylib"
-          test -x "$BIN"
-          mkdir -p "$HOME/.local/bin"
-          cp "$BIN" "$HOME/.local/bin/insert_dylib"
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          brew install ldid
+          pipx install --force https://github.com/asdfzxcvbn/pyzule-rw/archive/main.zip
+          cyan --help >/dev/null
 
       - name: Download clean Facebook IPA
         env:
@@ -40,15 +34,14 @@ jobs:
           unzip -tq input/Facebook-clean.ipa >/dev/null
           echo "INPUT_IPA=$PWD/input/Facebook-clean.ipa" >> "$GITHUB_ENV"
 
-      - name: Download Facebook Plus injection v1.0.1-2
+      - name: Download Facebook Plus rootfull v1.0.1-3
         run: |
           set -euo pipefail
-          rm -rf assets/injection
-          mkdir -p assets/injection
-          curl --fail --location --retry 3             "https://github.com/ttlongdl/Facebook-Plus/releases/download/v1.0.1-2/FacebookPlus-v1.0.1-2-Injection.zip"             -o "$RUNNER_TEMP/FacebookPlus-Injection.zip"
-          unzip -q "$RUNNER_TEMP/FacebookPlus-Injection.zip" -d assets/injection
-          test -f assets/injection/FacebookPlus.dylib
-          test -d assets/injection/FacebookPlus.bundle
+          mkdir -p assets
+          curl --fail --location --retry 3 \
+            "https://github.com/ttlongdl/Facebook-Plus/releases/download/v1.0.1-3/Facebook-Plus-v1.0.1-3-rootfull.deb" \
+            -o assets/FacebookPlus-rootfull.deb
+          echo "f2c37f2c3e6bf7d9cbdca61d267256c766ff3f45242c1376794a34aef004725e  assets/FacebookPlus-rootfull.deb" | shasum -a 256 -c -
 
       - name: Unpack Safari extension asset
         run: |
@@ -96,5 +89,5 @@ jobs:
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             gh release upload "$RELEASE_TAG" "$OUTPUT_IPA" --clobber
           else
-            gh release create "$RELEASE_TAG" "$OUTPUT_IPA"               --title "FB $FB_VERSION Plus Plus"               --notes "Facebook $FB_VERSION patched with Facebook Plus v1.0.1-2, fbbridge deep-link support, UISupportedDevices cleanup, TrollFools backup cleanup, and Open in Facebook Safari extension."
+            gh release create "$RELEASE_TAG" "$OUTPUT_IPA"               --title "FB $FB_VERSION Plus Plus"               --notes "Facebook $FB_VERSION patched with Facebook Plus v1.0.1-3, fbbridge deep-link support, UISupportedDevices cleanup, TrollFools backup cleanup, and Open in Facebook Safari extension."
           fi
