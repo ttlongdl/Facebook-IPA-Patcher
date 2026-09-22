@@ -100,22 +100,10 @@ PY
 inject_if_missing "FacebookPlus.dylib"
 echo "FacebookPlus load command verified in FBSharedFramework."
 
-# FBSharedFramework has no room for a second LC_LOAD_DYLIB. Chain AudioFix
-# through FacebookPlus instead: FBSharedFramework -> FacebookPlus -> AudioFix.
-PLUS="$FRAMEWORKS/FacebookPlus.dylib"
-AUDIO_LOAD="@executable_path/Frameworks/FBAudioFix-v0.3.14.dylib"
-if otool -L "$PLUS" | grep -Fq "$AUDIO_LOAD"; then
-  echo "AudioFix already chained through FacebookPlus."
-else
-  echo ">>> Chain AudioFix START: FacebookPlus.dylib -> FBAudioFix"
-  printf 'y\n' | insert_dylib --inplace --no-strip-codesig "$AUDIO_LOAD" "$PLUS"
-  echo ">>> Chain AudioFix DONE"
-fi
-otool -L "$PLUS" | grep -Fq "$AUDIO_LOAD" || {
-  echo "ERROR: AudioFix dependency missing from FacebookPlus.dylib" >&2
-  exit 1
-}
-echo "FacebookPlus + chained AudioFix verified."
+# Do not chain AudioFix as a Mach-O dependency of FacebookPlus: the resulting
+# app launches with a dyld crash. Keep the known-good AudioFix dylib in the
+# package for now, but do not load it until we have a safe loader strategy.
+echo "AudioFix copied but intentionally NOT loaded (safe build)."
 
 # Verify the exact golden ingredients before packaging.
 python3 scripts/verify.py "$APP"
