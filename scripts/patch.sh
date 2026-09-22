@@ -30,9 +30,20 @@ find "$APP" \( -iname '*troll-fools-backup*' -o -iname '*.bak' -o -iname '*.back
 # Register fbbridge:// after cyan has completed its app rewrite.
 python3 scripts/patch_plist.py "$PLIST"
 
-# Install the clean Safari Web Extension last so cyan cannot remove it.
-rm -rf "$PLUGINS/OpenInFacebookSafariExtension.appex"
+# SideStore-friendly extension policy: remove every extension carried by the
+# original Facebook IPA, then install only our Open in Facebook Safari extension.
+# This keeps the App ID / extension footprint minimal for free Apple IDs.
+rm -rf "$PLUGINS"
+mkdir -p "$PLUGINS"
 ditto assets/safari/OpenInFacebookSafariExtension.appex "$PLUGINS/OpenInFacebookSafariExtension.appex"
+
+# Hard guard: the packaged app must contain exactly one .appex.
+mapfile -t APPEXES < <(find "$PLUGINS" -maxdepth 1 -type d -name '*.appex' -print)
+if [ "${#APPEXES[@]}" -ne 1 ] || [ "$(basename "${APPEXES[0]:-}")" != "OpenInFacebookSafariExtension.appex" ]; then
+  echo "ERROR: expected only OpenInFacebookSafariExtension.appex under PlugIns" >&2
+  printf '%s\n' "${APPEXES[@]:-}" >&2
+  exit 1
+fi
 
 python3 scripts/verify.py "$APP"
 
