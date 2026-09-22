@@ -64,9 +64,6 @@ jobs:
           set -euo pipefail
           chmod +x scripts/patch.sh
           scripts/patch.sh "$INPUT_IPA"
-          test -n "${OUTPUT_IPA:-}"
-        env:
-          GITHUB_ENV: ${{ github.env }}
 
       - name: Resolve output
         run: |
