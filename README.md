@@ -23,12 +23,12 @@ The output is intentionally left for your sideloading tool/certificate signer to
 2. Open your fork's **Actions** tab and enable workflows if GitHub asks.
 3. Open **Build Facebook Plus Plus IPA**.
 4. Choose **Run workflow**.
-5. Paste a **direct-download URL** to your clean/decrypted Facebook IPA.
+5. Upload your clean/decrypted Facebook IPA to a temporary file host and paste its **direct-download URL**. **Filebin** (https://filebin.net) is a simple option: upload the IPA, open/copy the URL for the actual file (not just the bin page), and paste that URL into the workflow. Dropbox or another host is also fine as long as the URL downloads the IPA directly.
 6. Run the workflow.
 7. After all verification passes, get the resulting IPA from the workflow artifact or generated GitHub Release.
 8. Sign/install the output with your normal sideloading method (for example Feather or SideStore).
 
-> Do not commit or redistribute the clean Facebook IPA in this repository. Supply it to the workflow by direct URL.
+> Do not commit or redistribute the clean Facebook IPA in this repository. Supply it to the workflow by direct URL. Treat temporary file hosts as link-accessible storage: do not upload signing certificates, passwords, provisioning profiles, or other sensitive files.
 
 ## Facebook Plus
 
