@@ -34,14 +34,16 @@ jobs:
           unzip -tq input/Facebook-clean.ipa >/dev/null
           echo "INPUT_IPA=$PWD/input/Facebook-clean.ipa" >> "$GITHUB_ENV"
 
-      - name: Download Facebook Plus rootfull v1.0.1-3
+      - name: Download Facebook Plus rootfull v1.0.1-4
         run: |
           set -euo pipefail
           mkdir -p assets
-          curl --fail --location --retry 3 \
-            "https://github.com/ttlongdl/Facebook-Plus/releases/download/v1.0.1-3/Facebook-Plus-v1.0.1-3-rootfull.deb" \
-            -o assets/FacebookPlus-rootfull.deb
-          echo "f2c37f2c3e6bf7d9cbdca61d267256c766ff3f45242c1376794a34aef004725e  assets/FacebookPlus-rootfull.deb" | shasum -a 256 -c -
+          gh release download v1.0.1-4 \
+            --repo ttlongdl/Facebook-Plus \
+            --pattern "Facebook-Plus-v1.0.1-4-rootfull.deb" \
+            --dir assets
+          mv assets/Facebook-Plus-v1.0.1-4-rootfull.deb assets/FacebookPlus-rootfull.deb
+          test -s assets/FacebookPlus-rootfull.deb
 
       - name: Unpack Safari extension asset
         run: |
@@ -86,7 +88,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          NOTES="Facebook $FB_VERSION patched with Facebook Plus v1.0.1-3, libroot-free cyan injection, fbbridge deep-link support, UISupportedDevices cleanup, Facebook extension stripping (only Open in Facebook Safari extension retained), and TrollFools backup cleanup."
+          NOTES="Facebook $FB_VERSION patched with Facebook Plus v1.0.1-4, libroot-free cyan injection, fbbridge deep-link support, UISupportedDevices cleanup, Facebook extension stripping (only Open in Facebook Safari extension retained), and TrollFools backup cleanup."
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             gh release upload "$RELEASE_TAG" "$OUTPUT_IPA" --clobber
             gh release edit "$RELEASE_TAG" \
