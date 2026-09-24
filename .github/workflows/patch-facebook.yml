@@ -1,4 +1,4 @@
-name: Build Facebook Plus Plus IPA
+name: Build Facebook Plus IPA
 
 on:
   workflow_dispatch:
@@ -64,22 +64,26 @@ jobs:
         run: |
           set -euo pipefail
           chmod +x scripts/patch.sh
-          scripts/patch.sh "$INPUT_IPA"
+          PLUS_VERSION="1.0.1-4" scripts/patch.sh "$INPUT_IPA"
 
       - name: Resolve output
         run: |
           set -euo pipefail
-          OUT="$(find "$PWD" -maxdepth 1 -type f -name 'FB * Plus Plus.ipa' -print -quit)"
+          PLUS_VERSION="1.0.1-4"
+          OUT="$(find "$PWD" -maxdepth 1 -type f -name "FB * Plus v$PLUS_VERSION.ipa" -print -quit)"
           test -n "$OUT"
-          VERSION="$(basename "$OUT" | sed -E 's/^FB (.+) Plus Plus\.ipa$/\1/')"
+          BASENAME="$(basename "$OUT")"
+          VERSION="${BASENAME#FB }"
+          VERSION="${VERSION% Plus v$PLUS_VERSION.ipa}"
           echo "OUTPUT_IPA=$OUT" >> "$GITHUB_ENV"
           echo "FB_VERSION=$VERSION" >> "$GITHUB_ENV"
-          echo "RELEASE_TAG=fb-$VERSION-plus-plus" >> "$GITHUB_ENV"
+          echo "PLUS_VERSION=$PLUS_VERSION" >> "$GITHUB_ENV"
+          echo "RELEASE_TAG=fb-$VERSION-plus-v$PLUS_VERSION" >> "$GITHUB_ENV"
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: FB-${{ env.FB_VERSION }}-Plus-Plus
+          name: FB-${{ env.FB_VERSION }}-Plus-v${{ env.PLUS_VERSION }}
           path: ${{ env.OUTPUT_IPA }}
           compression-level: 0
 
@@ -92,10 +96,10 @@ jobs:
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             gh release upload "$RELEASE_TAG" "$OUTPUT_IPA" --clobber
             gh release edit "$RELEASE_TAG" \
-              --title "FB $FB_VERSION Plus Plus" \
+              --title "FB $FB_VERSION Plus v$PLUS_VERSION" \
               --notes "$NOTES"
           else
             gh release create "$RELEASE_TAG" "$OUTPUT_IPA" \
-              --title "FB $FB_VERSION Plus Plus" \
+              --title "FB $FB_VERSION Plus v$PLUS_VERSION" \
               --notes "$NOTES"
           fi
