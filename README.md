@@ -1,11 +1,11 @@
 # Facebook IPA Patcher
 
-Build a sideload-ready **FB <version> Plus Plus.ipa** from a clean/decrypted Facebook IPA using GitHub Actions.
+Build a sideload-ready **FB <version> Plus v<plus-version>.ipa** from a clean/decrypted Facebook IPA using GitHub Actions.
 
 ## What it does
 
 - Downloads the clean Facebook IPA from the direct URL supplied to the workflow.
-- Downloads the pinned **Facebook Plus v1.0.1-3 rootfull** package and verifies its SHA-256.
+- Downloads the pinned **Facebook Plus v1.0.1-4 rootfull** release package.
 - Uses **cyan / pyzule-rw** to inject Facebook Plus into the main Facebook executable.
 - Uses the libroot-free sideload build and lets cyan normalize/embed the required CydiaSubstrate framework.
 - Keeps **AudioFix + DeepLinkBridge** integrated in FacebookPlus.dylib.
@@ -13,15 +13,15 @@ Build a sideload-ready **FB <version> Plus Plus.ipa** from a clean/decrypted Fac
 - Removes TrollFools backup leftovers.
 - Installs the **Open in Facebook** Safari Web Extension.
 - Verifies that FacebookPlus is injected, CydiaSubstrate is embedded, and no `libroot` dependency remains.
-- Verifies the final ZIP and publishes **FB <version> Plus Plus.ipa** as both a workflow artifact and GitHub Release.
+- Verifies the final ZIP and publishes **FB <version> Plus v<plus-version>.ipa** as both a workflow artifact and GitHub Release.
 
-The output is intentionally left for your sideloading tool/certificate signer to sign. The workflow does not use cyan's TrollStore/AppSync fake-sign mode.
+The output is intentionally left for your sideloading tool/certificate signer to sign. The workflow deliberately does **not** pass cyan's `-s` fake-sign option; testing confirmed `-s` did not fix the free-AltStore tweak-loading issue, which was instead resolved by the Facebook Plus v1.0.1-4 iOS 15 deployment target.
 
 ## Run it in your own fork
 
 1. Fork this repository.
 2. Open your fork's **Actions** tab and enable workflows if GitHub asks.
-3. Open **Build Facebook Plus Plus IPA**.
+3. Open **Build Facebook Plus IPA**.
 4. Choose **Run workflow**.
 5. Upload your clean/decrypted Facebook IPA to a temporary file host and paste its **direct-download URL**. **Filebin** (https://filebin.net) is a simple option: upload the IPA, open/copy the URL for the actual file (not just the bin page), and paste that URL into the workflow. Dropbox or another host is also fine as long as the URL downloads the IPA directly.
 6. Run the workflow.
@@ -36,7 +36,7 @@ The tweak source, jailbreak packages, sideload-neutral injection payload, releas
 
 https://github.com/ttlongdl/Facebook-Plus
 
-Current pinned tweak build: **v1.0.1-3**.
+Current pinned tweak build: **v1.0.1-4**.
 
 ## Verification
 
