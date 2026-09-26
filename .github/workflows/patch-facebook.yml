@@ -34,15 +34,15 @@ jobs:
           unzip -tq input/Facebook-clean.ipa >/dev/null
           echo "INPUT_IPA=$PWD/input/Facebook-clean.ipa" >> "$GITHUB_ENV"
 
-      - name: Download Facebook Plus rootfull v1.0.1-4
+      - name: Download Facebook Plus rootfull v1.0.1-5
         run: |
           set -euo pipefail
           mkdir -p assets
-          gh release download v1.0.1-4 \
+          gh release download v1.0.1-5 \
             --repo ttlongdl/Facebook-Plus \
-            --pattern "Facebook-Plus-v1.0.1-4-rootfull.deb" \
+            --pattern "Facebook-Plus-v1.0.1-5-rootfull.deb" \
             --dir assets
-          mv assets/Facebook-Plus-v1.0.1-4-rootfull.deb assets/FacebookPlus-rootfull.deb
+          mv assets/Facebook-Plus-v1.0.1-5-rootfull.deb assets/FacebookPlus-rootfull.deb
           test -s assets/FacebookPlus-rootfull.deb
 
       - name: Unpack Safari extension asset
@@ -64,12 +64,12 @@ jobs:
         run: |
           set -euo pipefail
           chmod +x scripts/patch.sh
-          PLUS_VERSION="1.0.1-4" scripts/patch.sh "$INPUT_IPA"
+          PLUS_VERSION="1.0.1-5" scripts/patch.sh "$INPUT_IPA"
 
       - name: Resolve output
         run: |
           set -euo pipefail
-          PLUS_VERSION="1.0.1-4"
+          PLUS_VERSION="1.0.1-5"
           OUT="$(find "$PWD" -maxdepth 1 -type f -name "FB * Plus v$PLUS_VERSION.ipa" -print -quit)"
           test -n "$OUT"
           BASENAME="$(basename "$OUT")"
@@ -92,7 +92,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          NOTES="Facebook $FB_VERSION patched with Facebook Plus v1.0.1-4, libroot-free cyan injection, fbbridge deep-link support, UISupportedDevices cleanup, Facebook extension stripping (only Open in Facebook Safari extension retained), and TrollFools backup cleanup."
+          NOTES="Facebook $FB_VERSION patched with Facebook Plus v1.0.1-5, libroot-free cyan injection, fbbridge deep-link support, UISupportedDevices cleanup, Facebook extension stripping (only Open in Facebook Safari extension retained), and TrollFools backup cleanup."
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             gh release upload "$RELEASE_TAG" "$OUTPUT_IPA" --clobber
             gh release edit "$RELEASE_TAG" \
