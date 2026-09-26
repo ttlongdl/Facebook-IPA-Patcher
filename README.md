@@ -5,7 +5,7 @@ Build a sideload-ready **FB <version> Plus v<plus-version>.ipa** from a clean/de
 ## What it does
 
 - Downloads the clean Facebook IPA from the direct URL supplied to the workflow.
-- Downloads the pinned **Facebook Plus v1.0.1-4 rootfull** release package.
+- Downloads the pinned **Facebook Plus v1.0.1-5 rootfull** release package.
 - Uses **cyan / pyzule-rw** to inject Facebook Plus into the main Facebook executable.
 - Uses the libroot-free sideload build and lets cyan normalize/embed the required CydiaSubstrate framework.
 - Keeps **AudioFix + DeepLinkBridge** integrated in FacebookPlus.dylib.
@@ -15,7 +15,7 @@ Build a sideload-ready **FB <version> Plus v<plus-version>.ipa** from a clean/de
 - Verifies that FacebookPlus is injected, CydiaSubstrate is embedded, and no `libroot` dependency remains.
 - Verifies the final ZIP and publishes **FB <version> Plus v<plus-version>.ipa** as both a workflow artifact and GitHub Release.
 
-The output is intentionally left for your sideloading tool/certificate signer to sign. The workflow deliberately does **not** pass cyan's `-s` fake-sign option; testing confirmed `-s` did not fix the free-AltStore tweak-loading issue, which was instead resolved by the Facebook Plus v1.0.1-4 iOS 15 deployment target.
+The output is intentionally left for your sideloading tool/certificate signer to sign. The workflow deliberately does **not** pass cyan's `-s` fake-sign option; testing confirmed `-s` did not fix the free-AltStore tweak-loading issue, which was instead resolved by the Facebook Plus v1.0.1-5 iOS 15 deployment target.
 
 ## Run it in your own fork
 
@@ -36,7 +36,7 @@ The tweak source, jailbreak packages, sideload-neutral injection payload, releas
 
 https://github.com/ttlongdl/Facebook-Plus
 
-Current pinned tweak build: **v1.0.1-4**.
+Current pinned tweak build: **v1.0.1-5**.
 
 ## Verification
 
