@@ -35,6 +35,8 @@ jobs:
           echo "INPUT_IPA=$PWD/input/Facebook-clean.ipa" >> "$GITHUB_ENV"
 
       - name: Download Facebook Plus rootfull v1.0.1-5
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           mkdir -p assets
