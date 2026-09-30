@@ -71,4 +71,4 @@ with open(ext_plist, 'rb') as f:
     ext = plistlib.load(f)
 assert ext.get('NSExtension', {}).get('NSExtensionPointIdentifier') == 'com.apple.Safari.web-extension'
 
-print('Verification OK: Plus 1.0.1-3 is libroot-free, cyan main injection present, substrate embedded, only the Safari bridge extension retained')
+print('Verification OK: Plus 1.0.1-9 is libroot-free, cyan main injection present, substrate embedded, only the Safari bridge extension retained')
