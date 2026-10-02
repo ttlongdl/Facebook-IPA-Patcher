@@ -87,6 +87,7 @@ jobs:
         with:
           name: FB-${{ env.FB_VERSION }}-Plus-v${{ env.PLUS_VERSION }}
           path: ${{ env.OUTPUT_IPA }}
+          retention-days: 7
           compression-level: 0
 
       - name: Publish GitHub Release
