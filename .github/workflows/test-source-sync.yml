@@ -34,17 +34,18 @@ jobs:
           gh api "repos/$SOURCE_REPO/contents/$SOURCE_FILE?ref=main" --jq '.content' | tr -d '\n' | base64 --decode > "$WORK/source.json"
 
           jq --arg version "$FB_VERSION" --arg plus "$PLUS_VERSION" --arg date "$RELEASE_DATE" --argjson size "$ASSET_SIZE" --arg url "$ASSET_URL" --arg notes "$RELEASE_BODY" '
-            (.apps[] | select(.bundleIdentifier == "com.facebook.Facebook")) as $app |
-            $app.subtitle = ("Facebook " + $version + " · FBPlus v" + $plus) |
-            $app.localizedDescription = $notes |
-            $app.version = $version |
-            $app.versionDate = $date |
-            $app.size = $size |
-            $app.downloadURL = $url |
-            $app.versions = ([{
+            (.apps[] | select(.bundleIdentifier == "com.facebook.Facebook")) |= (
+              .subtitle = ("Facebook " + $version + " · FBPlus v" + $plus) |
+              .localizedDescription = $notes |
+              .version = $version |
+              .versionDate = $date |
+              .size = $size |
+              .downloadURL = $url |
+              .versions = ([{
               version: $version, date: $date, size: $size, downloadURL: $url,
               localizedDescription: ("Facebook " + $version + " with Facebook Plus v" + $plus + ".")
-            }] + (($app.versions // []) | map(select(.version != $version))))
+            }] + ((.versions // []) | map(select(.version != $version))))
+            )
           ' "$WORK/source.json" > "$WORK/source.updated.json"
 
           SHA="$(gh api "repos/$SOURCE_REPO/contents/$SOURCE_FILE?ref=main" --jq '.sha')"
