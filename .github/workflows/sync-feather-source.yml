@@ -1,0 +1,95 @@
+name: Sync Feather Source
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Find latest published Facebook Plus release
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          RELEASE_JSON="$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" | jq -e '[.[] | select(.draft == false and .prerelease == false and (.tag_name | startswith("fb-")))] | first // error("No published Facebook Plus release found")')"
+          TAG="$(jq -r '.tag_name' <<< "$RELEASE_JSON")"
+          if [[ ! "$TAG" =~ ^fb-(.+)-plus-v(.+)$ ]]; then
+            echo "::error::Unexpected release tag: $TAG"
+            exit 1
+          fi
+          FB_VERSION="${BASH_REMATCH[1]}"
+          PLUS_VERSION="${BASH_REMATCH[2]}"
+          ASSET="$(jq -e '[.assets[] | select(.name | endswith(".ipa"))] | if length == 1 then .[0] else error("Expected exactly one IPA asset") end' <<< "$RELEASE_JSON")"
+          ASSET_URL="$(jq -er '.browser_download_url' <<< "$ASSET")"
+          ASSET_SIZE="$(jq -er '.size | select(. > 0)' <<< "$ASSET")"
+          RELEASE_DATE="$(jq -er '.published_at' <<< "$RELEASE_JSON")"
+          RELEASE_BODY="$(jq -r '.body // ""' <<< "$RELEASE_JSON")"
+          echo "version=$FB_VERSION" >> "$GITHUB_OUTPUT"
+          echo "plus=$PLUS_VERSION" >> "$GITHUB_OUTPUT"
+          echo "date=$RELEASE_DATE" >> "$GITHUB_OUTPUT"
+          echo "size=$ASSET_SIZE" >> "$GITHUB_OUTPUT"
+          echo "url=$ASSET_URL" >> "$GITHUB_OUTPUT"
+          {
+            echo "notes<<RELEASE_NOTES_EOF"
+            printf '%s\n' "$RELEASE_BODY"
+            echo "RELEASE_NOTES_EOF"
+          } >> "$GITHUB_OUTPUT"
+          echo "Selected $TAG: $ASSET_URL ($ASSET_SIZE bytes)"
+
+      - name: Update Feather personal source JSON
+        env:
+          GH_TOKEN: ${{ secrets.SOURCE_REPO_TOKEN }}
+          SOURCE_REPO: ttlongdl/feather
+          SOURCE_FILE: personal-source.json
+          FB_VERSION: ${{ steps.release.outputs.version }}
+          PLUS_VERSION: ${{ steps.release.outputs.plus }}
+          RELEASE_DATE: ${{ steps.release.outputs.date }}
+          ASSET_SIZE: ${{ steps.release.outputs.size }}
+          ASSET_URL: ${{ steps.release.outputs.url }}
+          RELEASE_BODY: ${{ steps.release.outputs.notes }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "::error::Missing SOURCE_REPO_TOKEN (Contents: read/write on ttlongdl/feather)"
+            exit 1
+          fi
+          WORK="$(mktemp -d)"
+          trap 'rm -rf "$WORK"' EXIT
+          gh api "repos/$SOURCE_REPO/contents/$SOURCE_FILE?ref=main" > "$WORK/file.json"
+          jq -er '.content' "$WORK/file.json" | tr -d '\n' | base64 --decode > "$WORK/source.json"
+          jq -e --arg version "$FB_VERSION" --arg plus "$PLUS_VERSION" --arg date "$RELEASE_DATE" --argjson size "$ASSET_SIZE" --arg url "$ASSET_URL" --arg notes "$RELEASE_BODY" '
+            if ([.apps[] | select(.bundleIdentifier == "com.facebook.Facebook")] | length) != 1
+            then error("Expected exactly one Facebook app in Feather source")
+            else
+              .apps |= map(
+                if .bundleIdentifier == "com.facebook.Facebook" then
+                  . + {
+                    subtitle: ("Facebook " + $version + " · FBPlus v" + $plus),
+                    localizedDescription: $notes,
+                    version: $version,
+                    versionDate: $date,
+                    size: $size,
+                    downloadURL: $url,
+                    versions: ([{
+                      version: $version,
+                      date: $date,
+                      size: $size,
+                      downloadURL: $url,
+                      localizedDescription: ("Facebook " + $version + " with Facebook Plus v" + $plus + ".")
+                    }] + ((.versions // []) | map(select(.version != $version))))
+                  }
+                else . end
+              )
+            end
+          ' "$WORK/source.json" > "$WORK/updated.json"
+          jq -e '.apps | length > 0' "$WORK/updated.json" >/dev/null
+          SHA="$(jq -er '.sha' "$WORK/file.json")"
+          CONTENT="$(base64 < "$WORK/updated.json" | tr -d '\n')"
+          jq -n --arg message "Sync Facebook $FB_VERSION Plus v$PLUS_VERSION" --arg content "$CONTENT" --arg sha "$SHA" --arg branch main '{message:$message,content:$content,sha:$sha,branch:$branch}' > "$WORK/request.json"
+          gh api --method PUT "repos/$SOURCE_REPO/contents/$SOURCE_FILE" --input "$WORK/request.json" >/dev/null
+          echo "Updated $SOURCE_REPO/$SOURCE_FILE: Facebook $FB_VERSION Plus v$PLUS_VERSION"
