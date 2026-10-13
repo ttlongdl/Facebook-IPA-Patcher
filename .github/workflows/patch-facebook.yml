@@ -99,7 +99,7 @@ jobs:
           echo "OUTPUT_IPA=$OUT" >> "$GITHUB_ENV"
           echo "FB_VERSION=$VERSION" >> "$GITHUB_ENV"
           echo "PLUS_VERSION=$PLUS_VERSION" >> "$GITHUB_ENV"
-          echo "RELEASE_TAG=fb-$VERSION-plus-v$PLUS_VERSION" >> "$GITHUB_ENV"
+          echo "RELEASE_TAG=fb-$VERSION-plus-v$PLUS_VERSION-shopee-v$SHOPEE_VERSION-build-$GITHUB_RUN_NUMBER" >> "$GITHUB_ENV"
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
