@@ -47,6 +47,25 @@ jobs:
           mv assets/Facebook-Plus-v1.0.1-9-rootfull.deb assets/FacebookPlus-rootfull.deb
           test -s assets/FacebookPlus-rootfull.deb
 
+      - name: Download latest Rootless ShopeeBlocker dylib
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p assets
+          release="$(gh api 'repos/ttlongdl/ShopeeBlocker/releases?per_page=100' | jq -er '
+            [.[] | select(.draft == false and (.tag_name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+$")) and
+                ([.assets[]?.name] | index("ShopeeBlocker.dylib") != null))]
+            | first // error("No Rootless ShopeeBlocker release with dylib asset")
+          ')"
+          tag="$(jq -r '.tag_name' <<< "$release")"
+          test -n "$tag"
+          echo "Using Rootless ShopeeBlocker release: $tag"
+          gh release download "$tag" --repo ttlongdl/ShopeeBlocker \
+            --pattern 'ShopeeBlocker.dylib' --dir assets
+          test -s assets/ShopeeBlocker.dylib
+          echo "SHOPEE_VERSION=${tag#v}" >> "$GITHUB_ENV"
+
       - name: Unpack Safari extension asset
         run: |
           set -euo pipefail
@@ -95,7 +114,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          NOTES="Facebook $FB_VERSION patched with Facebook Plus v1.0.1-9, libroot-free cyan injection, fbbridge deep-link support, UISupportedDevices cleanup, Facebook extension stripping (only Open in Facebook Safari extension retained), and TrollFools backup cleanup."
+          NOTES="Facebook $FB_VERSION patched with Facebook Plus v1.0.1-9 and ShopeeBlocker v$SHOPEE_VERSION, libroot-free cyan injection, fbbridge deep-link support, UISupportedDevices cleanup, Facebook extension stripping (only Open in Facebook Safari extension retained), and TrollFools backup cleanup."
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             gh release upload "$RELEASE_TAG" "$OUTPUT_IPA" --clobber
             gh release edit "$RELEASE_TAG" \
