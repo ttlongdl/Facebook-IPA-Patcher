@@ -11,9 +11,10 @@ assert 'fbbridge' in schemes
 
 frameworks = os.path.join(app, 'Frameworks')
 plus = os.path.join(frameworks, 'FacebookPlus.dylib')
+shopee = os.path.join(frameworks, 'ShopeeBlocker.dylib')
 bundle = os.path.join(app, 'FacebookPlus.bundle')
 appex = os.path.join(app, 'PlugIns', 'OpenInFacebookSafariExtension.appex')
-for x in (plus, bundle, appex):
+for x in (plus, shopee, bundle, appex):
     assert os.path.exists(x), x
 
 # No TrollFools backup material may survive packaging.
@@ -39,6 +40,9 @@ main_exe = os.path.join(app, exe_name)
 assert os.path.isfile(main_exe), main_exe
 main_deps = subprocess.check_output(['otool', '-L', main_exe], text=True)
 assert 'FacebookPlus.dylib' in main_deps, main_deps
+assert 'ShopeeBlocker.dylib' in main_deps, main_deps
+shopee_deps = subprocess.check_output(['otool', '-L', shopee], text=True)
+assert 'CydiaSubstrate.framework/CydiaSubstrate' in shopee_deps, shopee_deps
 
 # Reject unresolved libroot anywhere in Mach-O dependencies under the app.
 bad = []
@@ -71,4 +75,4 @@ with open(ext_plist, 'rb') as f:
     ext = plistlib.load(f)
 assert ext.get('NSExtension', {}).get('NSExtensionPointIdentifier') == 'com.apple.Safari.web-extension'
 
-print('Verification OK: Plus 1.0.1-9 is libroot-free, cyan main injection present, substrate embedded, only the Safari bridge extension retained')
+print('Verification OK: FacebookPlus and ShopeeBlocker linked into main executable, libroot-free, substrate embedded, Safari bridge retained')
