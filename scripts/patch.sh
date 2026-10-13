@@ -8,9 +8,10 @@ rm -rf "$ROOT" "$CYAN_OUT"
 
 # Let cyan/pyzule-rw do the Mach-O work: extract the rootfull DEB, normalize
 # jailbreak dependencies (notably CydiaSubstrate), embed required frameworks,
-# add the Frameworks rpath and weak-inject FacebookPlus into the main executable.
+# add the Frameworks rpath and inject FacebookPlus plus ShopeeBlocker into the main executable.
 # Deliberately do NOT pass -s: the final IPA is signed later by Feather/SideStore.
-cyan -i "$IPA" -o "$CYAN_OUT" -f assets/FacebookPlus-rootfull.deb -u
+test -s assets/ShopeeBlocker.dylib
+cyan -i "$IPA" -o "$CYAN_OUT" -f assets/FacebookPlus-rootfull.deb assets/ShopeeBlocker.dylib -u
 unzip -tq "$CYAN_OUT" >/dev/null
 mkdir -p "$ROOT"
 unzip -q "$CYAN_OUT" -d "$ROOT"
