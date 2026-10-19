@@ -20,7 +20,8 @@ jobs:
       - name: Install cyan / pyzule-rw
         run: |
           set -euo pipefail
-          brew install ldid
+          brew install ldid dpkg
+          command -v dpkg-deb
           pipx install --force https://github.com/asdfzxcvbn/pyzule-rw/archive/main.zip
           cyan --help >/dev/null
 
