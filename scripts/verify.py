@@ -58,7 +58,8 @@ for root, _, files in os.walk(app):
 assert not bad, 'libroot dependency remains in: ' + ', '.join(bad)
 
 # AudioFix/DeepLinkBridge are integrated into FacebookPlus.dylib.
-assert not os.path.exists(os.path.join(frameworks, 'FBAudioFix-v0.3.14.dylib'))
+# Reject any standalone FBAudioFix library, regardless of version.
+assert not [name for name in os.listdir(frameworks) if name.lower().startswith('fbaudiofix') and name.lower().endswith('.dylib')], 'Standalone FBAudioFix dylib found; double-hook risk'
 
 # SideStore/free-account build must carry exactly one extension: our Safari bridge.
 plugins = os.path.join(app, 'PlugIns')
