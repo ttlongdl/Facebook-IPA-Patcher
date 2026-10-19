@@ -51,7 +51,7 @@ python3 scripts/verify.py "$APP"
 
 VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$PLIST")"
 test -n "$VERSION"
-PLUS_VERSION="${PLUS_VERSION:-1.0.1-9}"
+PLUS_VERSION="${PLUS_VERSION:?PLUS_VERSION must be supplied by the workflow}"
 OUT="$PWD/FB $VERSION Plus v$PLUS_VERSION.ipa"
 rm -f "$OUT"
 (
