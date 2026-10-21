@@ -12,10 +12,10 @@ The [Build Facebook Plus Triple-Tweak IPA](.github/workflows/patch-facebook.yml)
 
 1. Open [Actions → Build Facebook Plus Triple-Tweak IPA](https://github.com/ttlongdl/Facebook-IPA-Patcher/actions/workflows/patch-facebook.yml) and select **Run workflow** on `main`.
 2. Paste a direct download URL to your own decrypted Facebook IPA. Optionally enter a custom bundle ID.
-3. After success, download `Facebook-Triple-Tweak-v1.0.2-2` from the workflow artifacts, or the IPA from the versioned GitHub Release.
+3. After success, download `FB-Plus-v1.0.2-2-Triple-Tweak` from the workflow artifacts, or the IPA from the versioned GitHub Release.
 4. Sign the IPA, **including its Safari app extension**, with Feather or another compatible signer. Test Facebook, FBPlus settings, FBAudioFix, Shopee blocking, Story/Reels downloads and the Safari extension on-device.
 
-The output IPA is `Facebook-Triple-Tweak-UNSIGNED.ipa` and must be signed for installation. The workflow creates a versioned release tag of the form `fb-<facebook-version>-plus-v1.0.2-2-triple-build-<run-number>` **only after** successful injection and ZIP validation.
+The output IPA is named `FB <Facebook-version> Plus v1.0.2-2 (Triple-Tweak).ipa` and must be signed for installation. The workflow creates a versioned release tag of the form `fb-<facebook-version>-plus-v1.0.2-2-triple-build-<run-number>` **only after** successful injection and ZIP validation.
 
 ## CI and version integrity
 
