@@ -1,8 +1,8 @@
-# Facebook IPA Patcher — Triple-Tweak v1.0.2-2
+# Facebook IPA Patcher — Triple-Tweak (release-driven)
 
 Build a sideload-ready Facebook IPA from your own decrypted Facebook IPA with **three independent rootless DEBs**:
 
-- [Facebook Plus](https://github.com/ttlongdl/Facebook-Plus) **v1.0.2-2** (source pinned to commit `84f314d`)
+- [Facebook Plus](https://github.com/ttlongdl/Facebook-Plus) **latest published stable release tag** (verified against its `control` version)
 - [FBAudioFix](https://github.com/ttlongdl/FBAudioFix) — standalone, built from its repository's current main branch
 - [ShopeeBlocker](https://github.com/ttlongdl/ShopeeBlocker) — standalone, built from its repository's current main branch
 
@@ -12,20 +12,20 @@ The [Build Facebook Plus Triple-Tweak IPA](.github/workflows/patch-facebook.yml)
 
 1. Open [Actions → Build Facebook Plus Triple-Tweak IPA](https://github.com/ttlongdl/Facebook-IPA-Patcher/actions/workflows/patch-facebook.yml) and select **Run workflow** on `main`.
 2. Paste a direct download URL to your own decrypted Facebook IPA. Optionally enter a custom bundle ID.
-3. After success, download `FB-Plus-v1.0.2-2-Triple-Tweak` from the workflow artifacts, or the IPA from the versioned GitHub Release.
+3. After success, download `Facebook-Plus-Triple-Tweak` from the workflow artifacts, or the IPA from the versioned GitHub Release.
 4. Sign the IPA, **including its Safari app extension**, with Feather or another compatible signer. Test Facebook, FBPlus settings, FBAudioFix, Shopee blocking, Story/Reels downloads and the Safari extension on-device.
 
-The output IPA is named `FB <Facebook-version> Plus v1.0.2-2 (Triple-Tweak).ipa` and must be signed for installation. The workflow creates a versioned release tag of the form `fb-<facebook-version>-plus-v1.0.2-2-triple-build-<run-number>` **only after** successful injection and ZIP validation.
+The output IPA is named `FB <Facebook-version> Plus v<FBPlus-version> (Triple-Tweak).ipa` and must be signed for installation. The workflow creates a versioned release tag of the form `fb-<facebook-version>-plus-v<FBPlus-version>-triple-build-<run-number>` **only after** successful injection and ZIP validation.
 
 ## CI and version integrity
 
-The pipeline reads the FBPlus `control` file, rejects versions other than `1.0.2-2`, builds its rootless DEB, and verifies the embedded DEB Version matches `control`. It separately builds the other two rootless DEBs from source. All three are passed together to cyan, alongside the Safari extension and icon metadata. The workflow fails if expected DEBs or the Safari extension are missing. It validates the output ZIP before publishing.
+The pipeline checks out the latest published FBPlus release tag, verifies it matches the FBPlus `control` version, builds its rootless DEB, and verifies the embedded DEB Version matches `control`. It separately builds the other two rootless DEBs from source. All three are passed together to cyan, alongside the Safari extension and icon metadata. The workflow fails if expected DEBs or the Safari extension are missing. It validates the output ZIP before publishing.
 
-**Status:** The predecessor three-DEB workflow in Facebook-Plus has been tested successfully, including on-device Safari extension behavior. **This Patcher workflow has not yet passed its own end-to-end CI run.** No assumption is made that every individual hook or legacy deep-link alias is validated.
+**Status:** The predecessor three-DEB workflow in Facebook-Plus has been tested successfully, including on-device Safari extension behavior. **The Patcher workflow has passed end-to-end CI and produced a published FB 584.0.0 / FBPlus v1.0.2-2 IPA; future release-driven changes require a new CI run.** No assumption is made that every individual hook or legacy deep-link alias is validated.
 
 ## Legacy files
 
-`scripts/patch.sh`, `scripts/verify.py`, and the bundled legacy Safari extension ZIP belong to the **previous rootfull/integrated-audio pipeline**. They are retained only for historical reference and **are not invoked** by the new workflow. Do not run the old script to produce v1.0.2-2.
+`scripts/patch.sh`, `scripts/verify.py`, and the bundled legacy Safari extension ZIP belong to the **previous rootfull/integrated-audio pipeline**. They are retained only for historical reference and **are not invoked** by the new workflow. Do not run the old script to produce a new triple-tweak IPA.
 
 ## Security and distribution
 
