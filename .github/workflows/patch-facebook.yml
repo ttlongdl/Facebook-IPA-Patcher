@@ -129,14 +129,20 @@ jobs:
             -f "${fb[0]}" "${audio[0]}" "${shopee[0]}" \
             "${logos[@]}" "${plugins[@]}" "${extras[@]}" -uwsgq
           unzip -tq fbplus/staging/Facebook-Triple-Tweak-UNSIGNED.ipa >/dev/null
-          echo "IPA_OUTPUT=$PWD/fbplus/staging/Facebook-Triple-Tweak-UNSIGNED.ipa" >> "$GITHUB_ENV"
+          FB_VERSION="$(python3 fbplus/scripts/ipa_version.py fbplus/test/com.facebook.Facebook.ipa)"
+          test -n "$FB_VERSION"
+          IPA_NAME="FB ${FB_VERSION} Plus v${PLUS_VERSION} (Triple-Tweak).ipa"
+          mv fbplus/staging/Facebook-Triple-Tweak-UNSIGNED.ipa "fbplus/staging/$IPA_NAME"
+          unzip -tq "fbplus/staging/$IPA_NAME" >/dev/null
+          echo "FB_VERSION=$FB_VERSION" >> "$GITHUB_ENV"
+          echo "IPA_OUTPUT=$PWD/fbplus/staging/$IPA_NAME" >> "$GITHUB_ENV"
 
       - name: Upload verified IPA and standalone DEBs
         uses: actions/upload-artifact@v4
         with:
-          name: Facebook-Triple-Tweak-v1.0.2-2
+          name: FB-Plus-v1.0.2-2-Triple-Tweak
           path: |
-            fbplus/staging/Facebook-Triple-Tweak-UNSIGNED.ipa
+            fbplus/staging/*.ipa
             fbplus/packages/*rootless.deb
             standalone/FBAudioFix/packages/*.deb
             standalone/ShopeeBlocker/packages/*.deb
@@ -148,8 +154,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          FB_VERSION="$(python3 fbplus/scripts/ipa_version.py fbplus/test/com.facebook.Facebook.ipa)"
           test -n "$FB_VERSION"
+          test -s "$IPA_OUTPUT"
           TAG="fb-${FB_VERSION}-plus-v${PLUS_VERSION}-triple-build-${GITHUB_RUN_NUMBER}"
           gh release create "$TAG" "$IPA_OUTPUT" --repo "${GITHUB_REPOSITORY}" \
             --title "FB ${FB_VERSION} Plus v${PLUS_VERSION} (Triple-Tweak)" \
