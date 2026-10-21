@@ -37,6 +37,7 @@ jobs:
           set -euo pipefail
           git clone --quiet --recursive https://github.com/ttlongdl/Facebook-Plus.git fbplus
           cd fbplus
+          git checkout --detach 84f314d6dc87afbeb493fb768402d850a2ed2eaa
           VERSION="$(awk -F': ' '/^Version:/{print $2; exit}' control)"
           test "$VERSION" = "1.0.2-2" || { echo "::error::Expected Facebook Plus 1.0.2-2, got $VERSION"; exit 1; }
           echo "PLUS_VERSION=$VERSION" >> "$GITHUB_ENV"
