@@ -18,13 +18,15 @@ jobs:
           set -euo pipefail
           RELEASE_JSON="$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" | jq -e '[.[] | select(.draft == false and .prerelease == false and (.tag_name | startswith("fb-")))] | first // error("No published Facebook Plus release found")')"
           TAG="$(jq -r '.tag_name' <<< "$RELEASE_JSON")"
-          if [[ ! "$TAG" =~ ^fb-(.+)-plus-v([0-9]+\.[0-9]+\.[0-9]+-[0-9]+)(-shopee-v([0-9]+\.[0-9]+\.[0-9]+)-build-[0-9]+)?$ ]]; then
+          if [[ ! "$TAG" =~ ^fb-(.+)-plus-v([0-9]+\.[0-9]+\.[0-9]+-[0-9]+)(-triple-build-[0-9]+|-shopee-v([0-9]+\.[0-9]+\.[0-9]+)-build-[0-9]+)?$ ]]; then
             echo "::error::Unexpected release tag: $TAG"
             exit 1
           fi
           FB_VERSION="${BASH_REMATCH[1]}"
           PLUS_VERSION="${BASH_REMATCH[2]}"
           SHOPEE_VERSION="${BASH_REMATCH[4]:-}"
+          TRIPLE_TWEAK=false
+          if [[ "$TAG" == *-triple-build-* ]]; then TRIPLE_TWEAK=true; fi
           ASSET="$(jq -e '[.assets[] | select(.name | endswith(".ipa"))] | if length == 1 then .[0] else error("Expected exactly one IPA asset") end' <<< "$RELEASE_JSON")"
           ASSET_URL="$(jq -er '.browser_download_url' <<< "$ASSET")"
           ASSET_SIZE="$(jq -er '.size | select(. > 0)' <<< "$ASSET")"
@@ -33,6 +35,7 @@ jobs:
           echo "version=$FB_VERSION" >> "$GITHUB_OUTPUT"
           echo "plus=$PLUS_VERSION" >> "$GITHUB_OUTPUT"
           echo "shopee=$SHOPEE_VERSION" >> "$GITHUB_OUTPUT"
+          echo "triple=$TRIPLE_TWEAK" >> "$GITHUB_OUTPUT"
           echo "date=$RELEASE_DATE" >> "$GITHUB_OUTPUT"
           echo "size=$ASSET_SIZE" >> "$GITHUB_OUTPUT"
           echo "url=$ASSET_URL" >> "$GITHUB_OUTPUT"
@@ -51,6 +54,7 @@ jobs:
           FB_VERSION: ${{ steps.release.outputs.version }}
           PLUS_VERSION: ${{ steps.release.outputs.plus }}
           SHOPEE_VERSION: ${{ steps.release.outputs.shopee }}
+          TRIPLE_TWEAK: ${{ steps.release.outputs.triple }}
           RELEASE_DATE: ${{ steps.release.outputs.date }}
           ASSET_SIZE: ${{ steps.release.outputs.size }}
           ASSET_URL: ${{ steps.release.outputs.url }}
@@ -65,14 +69,14 @@ jobs:
           trap 'rm -rf "$WORK"' EXIT
           gh api "repos/$SOURCE_REPO/contents/$SOURCE_FILE?ref=main" > "$WORK/file.json"
           jq -er '.content' "$WORK/file.json" | tr -d '\n' | base64 --decode > "$WORK/source.json"
-          jq -e --arg version "$FB_VERSION" --arg plus "$PLUS_VERSION" --arg shopee "$SHOPEE_VERSION" --arg date "$RELEASE_DATE" --argjson size "$ASSET_SIZE" --arg url "$ASSET_URL" --arg notes "$RELEASE_BODY" '
+          jq -e --arg version "$FB_VERSION" --arg plus "$PLUS_VERSION" --arg shopee "$SHOPEE_VERSION" --arg triple "$TRIPLE_TWEAK" --arg date "$RELEASE_DATE" --argjson size "$ASSET_SIZE" --arg url "$ASSET_URL" --arg notes "$RELEASE_BODY" '
             if ([.apps[] | select(.bundleIdentifier == "com.facebook.Facebook")] | length) != 1
             then error("Expected exactly one Facebook app in Feather source")
             else
               .apps |= map(
                 if .bundleIdentifier == "com.facebook.Facebook" then
                   . + {
-                    subtitle: ("Facebook " + $version + " · FBPlus v" + $plus + (if $shopee != "" then " · ShopeeBlocker v" + $shopee else "" end)),
+                    subtitle: ("Facebook " + $version + " · FBPlus v" + $plus + (if $triple == "true" then " · FBAudioFix · ShopeeBlocker" elif $shopee != "" then " · ShopeeBlocker v" + $shopee else "" end)),
                     localizedDescription: $notes,
                     version: $version,
                     versionDate: $date,
@@ -83,7 +87,7 @@ jobs:
                       date: $date,
                       size: $size,
                       downloadURL: $url,
-                      localizedDescription: ("Facebook " + $version + " with Facebook Plus v" + $plus + (if $shopee != "" then " and ShopeeBlocker v" + $shopee else "" end) + ".")
+                      localizedDescription: ("Facebook " + $version + " with Facebook Plus v" + $plus + (if $triple == "true" then ", standalone FBAudioFix and ShopeeBlocker" elif $shopee != "" then " and ShopeeBlocker v" + $shopee else "" end) + ".")
                     }] + ((.versions // []) | map(select(.version != $version))))
                   }
                 else . end
