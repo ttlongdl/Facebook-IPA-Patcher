@@ -134,6 +134,48 @@ jobs:
           cyan -i fbplus/test/com.facebook.Facebook.ipa -o fbplus/staging/Facebook-Triple-Tweak-UNSIGNED.ipa \
             -f "${fb[0]}" "${audio[0]}" "${shopee[0]}" \
             "${logos[@]}" "${plugins[@]}" "${extras[@]}" -uwsgq
+          # Patch the main app Info.plist after cyan injection, before signing.
+          # Files exposes only Documents, not the entire Facebook sandbox.
+          python3 - <<'PY'
+          import os
+          import plistlib
+          import tempfile
+          import zipfile
+
+          ipa = "fbplus/staging/Facebook-Triple-Tweak-UNSIGNED.ipa"
+          fd, temporary = tempfile.mkstemp(suffix=".ipa", dir=os.path.dirname(ipa))
+          os.close(fd)
+          try:
+              with zipfile.ZipFile(ipa, "r") as source, zipfile.ZipFile(temporary, "w") as output:
+                  plist_paths = [
+                      name for name in source.namelist()
+                      if name.startswith("Payload/")
+                      and name.count("/") == 2
+                      and name.endswith(".app/Info.plist")
+                  ]
+                  if len(plist_paths) != 1:
+                      raise RuntimeError(f"Expected one main app Info.plist, got: {plist_paths}")
+                  target = plist_paths[0]
+                  for entry in source.infolist():
+                      contents = source.read(entry.filename)
+                      if entry.filename == target:
+                          info = plistlib.loads(contents)
+                          info["UIFileSharingEnabled"] = True
+                          info["LSSupportsOpeningDocumentsInPlace"] = True
+                          contents = plistlib.dumps(info, fmt=plistlib.FMT_BINARY)
+                      output.writestr(entry, contents)
+              os.replace(temporary, ipa)
+          finally:
+              if os.path.exists(temporary):
+                  os.unlink(temporary)
+
+          with zipfile.ZipFile(ipa) as archive:
+              info = plistlib.loads(archive.read(target))
+              for key in ("UIFileSharingEnabled", "LSSupportsOpeningDocumentsInPlace"):
+                  if info.get(key) is not True:
+                      raise RuntimeError(f"{key} is not enabled")
+                  print(f"Verified {key}=true in {target}")
+          PY
           unzip -tq fbplus/staging/Facebook-Triple-Tweak-UNSIGNED.ipa >/dev/null
           FB_VERSION="$(python3 fbplus/scripts/ipa_version.py fbplus/test/com.facebook.Facebook.ipa)"
           test -n "$FB_VERSION"
