@@ -88,22 +88,19 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p standalone
-          # Pin the experimental audio logic explicitly; never silently fall back to main.
-          AUDIO_REF="0.3.21-experimental"
-          git clone --quiet --depth 1 --branch "$AUDIO_REF" https://github.com/ttlongdl/FBAudioFix.git standalone/FBAudioFix
-          AUDIO_VERSION="$(awk -F': ' '/^Version:/{print $2; exit}' standalone/FBAudioFix/control)"
-          test "$AUDIO_VERSION" = "0.3.21" || { echo "::error::Expected FBAudioFix 0.3.21, got $AUDIO_VERSION"; exit 1; }
-          echo "FBAudioFix ref=$AUDIO_REF commit=$(git -C standalone/FBAudioFix rev-parse HEAD) version=$AUDIO_VERSION"
-          git clone --quiet --depth 1 https://github.com/ttlongdl/ShopeeBlocker.git standalone/ShopeeBlocker
           for repo in FBAudioFix ShopeeBlocker; do
+            git clone --depth 1 "https://github.com/ttlongdl/${repo}.git" "standalone/${repo}"
             make -C "standalone/${repo}" clean
             make -C "standalone/${repo}" package FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless
             find "standalone/${repo}/packages" -maxdepth 1 -name '*.deb' -print
           done
+          AUDIO_VERSION="$(awk -F': ' '/^Version:/{print $2; exit}' standalone/FBAudioFix/control)"
+          test "$AUDIO_VERSION" = "0.3.20" || { echo "::error::Expected stable FBAudioFix 0.3.20, got $AUDIO_VERSION"; exit 1; }
           shopt -s nullglob
           audio_debs=(standalone/FBAudioFix/packages/*.deb)
           (( ${#audio_debs[@]} == 1 )) || { echo "::error::Expected exactly one FBAudioFix DEB"; exit 1; }
           test "$(dpkg-deb -f "${audio_debs[0]}" Version)" = "$AUDIO_VERSION" || { echo "::error::Audio DEB version mismatch"; exit 1; }
+          echo "Using stable FBAudioFix $AUDIO_VERSION at $(git -C standalone/FBAudioFix rev-parse --short HEAD)"
 
       - name: Build Safari extensions and merge icon metadata
         run: |
@@ -217,4 +214,4 @@ jobs:
           TAG="fb-${FB_VERSION}-plus-v${PLUS_VERSION}-triple-build-${GITHUB_RUN_NUMBER}"
           gh release create "$TAG" "$IPA_OUTPUT" --repo "${GITHUB_REPOSITORY}" \
             --title "FB ${FB_VERSION} Plus v${PLUS_VERSION} (Triple-Tweak)" \
-            --notes "Facebook Plus v${PLUS_VERSION}, FBAudioFix 0.3.21-experimental (built from source), standalone ShopeeBlocker, plus Open in Facebook Safari extension. Generated from user-supplied decrypted IPA. Sign the resulting IPA yourself."
+            --notes "Facebook Plus v${PLUS_VERSION}, stable FBAudioFix 0.3.20 (built from main), standalone ShopeeBlocker, plus Open in Facebook Safari extension. Generated from user-supplied decrypted IPA. Sign the resulting IPA yourself."
