@@ -3,7 +3,7 @@
 Build a sideload-ready Facebook IPA from your own decrypted Facebook IPA with **three independent rootless DEBs**:
 
 - [Facebook Plus](https://github.com/ttlongdl/Facebook-Plus) **latest published stable release tag** (verified against its `control` version)
-- [FBAudioFix](https://github.com/ttlongdl/FBAudioFix) — **0.3.21-experimental**, built from the dedicated experimental branch (including Files diagnostic logging)
+- [FBAudioFix](https://github.com/ttlongdl/FBAudioFix) — **stable 0.3.20**, built from the repository's main branch (including Files diagnostic logging)
 - [ShopeeBlocker](https://github.com/ttlongdl/ShopeeBlocker) — standalone, built from its repository's current main branch
 
 The [Build Facebook Plus Triple-Tweak IPA](.github/workflows/patch-facebook.yml) workflow is based on the successfully tested cyan three-DEB pipeline from Facebook-Plus. It also builds and injects the **Open in Facebook Safari extension** and custom icons. **FBAudioFix is not integrated into FBPlus**.
@@ -19,9 +19,9 @@ The output IPA is named `FB <Facebook-version> Plus v<FBPlus-version> (Triple-Tw
 
 ## CI and version integrity
 
-The pipeline checks out the latest published FBPlus release tag, verifies it matches the FBPlus `control` version, builds its rootless DEB, and verifies the embedded DEB Version matches `control`. It builds FBAudioFix from the pinned `0.3.21-experimental` branch (and verifies both `control` and built DEB report `0.3.21`), while ShopeeBlocker is built from its current main branch. All three are passed together to cyan, alongside the Safari extension and icon metadata. The workflow fails if expected DEBs or the Safari extension are missing. It validates the output ZIP before publishing.
+The pipeline checks out the latest published FBPlus release tag, verifies it matches the FBPlus `control` version, builds its rootless DEB, and verifies the embedded DEB Version matches `control`. It builds FBAudioFix from its main branch and requires both `control` and the built DEB to report stable version `0.3.20`; ShopeeBlocker is also built from its main branch. All three are passed together to cyan, alongside the Safari extension and icon metadata. The workflow fails if expected DEBs or the Safari extension are missing. It validates the output ZIP before publishing.
 
-**Status:** The predecessor three-DEB workflow in Facebook-Plus has been tested successfully, including on-device Safari extension behavior. **The previous Patcher workflow passed end-to-end CI and produced a published FB 584.0.0 / FBPlus v1.0.2-2 IPA. The new 0.3.21-experimental integration has not yet been verified by a complete Triple-Tweak workflow run.** No assumption is made that every individual hook or legacy deep-link alias is validated.
+**Status:** The predecessor three-DEB workflow in Facebook-Plus has been tested successfully, including on-device Safari extension behavior. **The previous Patcher workflow passed end-to-end CI and produced a published FB 584.0.0 / FBPlus v1.0.2-2 IPA. The 0.3.21 experimental audio integration was rolled back after on-device audio regressions; the current workflow returns to stable FBAudioFix 0.3.20 and requires a fresh Triple-Tweak CI run.** No assumption is made that every individual hook or legacy deep-link alias is validated.
 
 ## Legacy files
 
