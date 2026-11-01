@@ -99,4 +99,16 @@ jobs:
           CONTENT="$(base64 < "$WORK/updated.json" | tr -d '\n')"
           jq -n --arg message "Sync Facebook $FB_VERSION Plus v$PLUS_VERSION" --arg content "$CONTENT" --arg sha "$SHA" --arg branch main '{message:$message,content:$content,sha:$sha,branch:$branch}' > "$WORK/request.json"
           gh api --method PUT "repos/$SOURCE_REPO/contents/$SOURCE_FILE" --input "$WORK/request.json" >/dev/null
+          # Confirm the remote source contains exactly the release we selected.
+          gh api "repos/$SOURCE_REPO/contents/$SOURCE_FILE?ref=main" \
+            --jq '.content' | tr -d '\\n' | base64 --decode > "$WORK/verified.json"
+          jq -e --arg version "$FB_VERSION" --arg url "$ASSET_URL" --arg plus "$PLUS_VERSION" '
+            [.apps[] | select(.bundleIdentifier == "com.facebook.Facebook"
+              and .version == $version
+              and .downloadURL == $url
+              and (.subtitle | contains("FBPlus v" + $plus)))] | length == 1
+          ' "$WORK/verified.json" >/dev/null || {
+            echo "::error::Feather source post-write verification failed"
+            exit 1
+          }
           echo "Updated $SOURCE_REPO/$SOURCE_FILE: Facebook $FB_VERSION Plus v$PLUS_VERSION"
