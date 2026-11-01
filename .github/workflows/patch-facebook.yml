@@ -186,7 +186,7 @@ jobs:
           unzip -tq fbplus/staging/Facebook-Triple-Tweak-UNSIGNED.ipa >/dev/null
           FB_VERSION="$(python3 fbplus/scripts/ipa_version.py fbplus/test/com.facebook.Facebook.ipa)"
           test -n "$FB_VERSION"
-          IPA_NAME="FB ${FB_VERSION} Plus v${PLUS_VERSION} (Triple-Tweak).ipa"
+          IPA_NAME="FB ${FB_VERSION} Plus v${PLUS_VERSION}.ipa"
           mv fbplus/staging/Facebook-Triple-Tweak-UNSIGNED.ipa "fbplus/staging/$IPA_NAME"
           unzip -tq "fbplus/staging/$IPA_NAME" >/dev/null
           echo "FB_VERSION=$FB_VERSION" >> "$GITHUB_ENV"
@@ -213,5 +213,5 @@ jobs:
           test -s "$IPA_OUTPUT"
           TAG="fb-${FB_VERSION}-plus-v${PLUS_VERSION}-triple-build-${GITHUB_RUN_NUMBER}"
           gh release create "$TAG" "$IPA_OUTPUT" --repo "${GITHUB_REPOSITORY}" \
-            --title "FB ${FB_VERSION} Plus v${PLUS_VERSION} (Triple-Tweak)" \
+            --title "FB ${FB_VERSION} Plus v${PLUS_VERSION}" \
             --notes "Facebook Plus v${PLUS_VERSION}, stable FBAudioFix 0.3.20 (built from main), standalone ShopeeBlocker, plus Open in Facebook Safari extension. Generated from user-supplied decrypted IPA. Sign the resulting IPA yourself."
