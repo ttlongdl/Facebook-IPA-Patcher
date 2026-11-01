@@ -3,7 +3,7 @@
 Build a sideload-ready Facebook IPA from your own decrypted Facebook IPA with **three independent rootless DEBs**:
 
 - [Facebook Plus](https://github.com/ttlongdl/Facebook-Plus) **latest published stable release tag** (verified against its `control` version)
-- [FBAudioFix](https://github.com/ttlongdl/FBAudioFix) — **stable 0.3.20**, built from the repository's main branch (including Files diagnostic logging)
+- [FBAudioFix](https://github.com/ttlongdl/FBAudioFix) — **stable 0.3.20**, built from the repository's main branch (including its standalone diagnostic logging)
 - [ShopeeBlocker](https://github.com/ttlongdl/ShopeeBlocker) — standalone, built from its repository's current main branch
 
 The [Build Facebook Plus Triple-Tweak IPA](.github/workflows/patch-facebook.yml) workflow is based on the successfully tested cyan three-DEB pipeline from Facebook-Plus. It also builds and injects the **Open in Facebook Safari extension** and custom icons. **FBAudioFix is not integrated into FBPlus**.
@@ -15,13 +15,13 @@ The [Build Facebook Plus Triple-Tweak IPA](.github/workflows/patch-facebook.yml)
 3. After success, download `Facebook-Plus-Triple-Tweak` from the workflow artifacts, or the IPA from the versioned GitHub Release.
 4. Sign the IPA, **including its Safari app extension**, with Feather or another compatible signer. Test Facebook, FBPlus settings, FBAudioFix, Shopee blocking, Story/Reels downloads and the Safari extension on-device.
 
-The output IPA is named `FB <Facebook-version> Plus v<FBPlus-version> (Triple-Tweak).ipa` and must be signed for installation. The workflow creates a versioned release tag of the form `fb-<facebook-version>-plus-v<FBPlus-version>-triple-build-<run-number>` **only after** successful injection and ZIP validation.
+The output IPA is named `FB <Facebook-version> Plus v<FBPlus-version>.ipa` and must be signed for installation. The workflow creates a versioned release tag of the form `fb-<facebook-version>-plus-v<FBPlus-version>-triple-build-<run-number>` **only after** successful injection and ZIP validation.
 
 ## CI and version integrity
 
 The pipeline checks out the latest published FBPlus release tag, verifies it matches the FBPlus `control` version, builds its rootless DEB, and verifies the embedded DEB Version matches `control`. It builds FBAudioFix from its main branch and requires both `control` and the built DEB to report stable version `0.3.20`; ShopeeBlocker is also built from its main branch. All three are passed together to cyan, alongside the Safari extension and icon metadata. The workflow fails if expected DEBs or the Safari extension are missing. It validates the output ZIP before publishing.
 
-**Status:** The predecessor three-DEB workflow in Facebook-Plus has been tested successfully, including on-device Safari extension behavior. **The previous Patcher workflow passed end-to-end CI and produced a published FB 584.0.0 / FBPlus v1.0.2-2 IPA. The 0.3.21 experimental audio integration was rolled back after on-device audio regressions; the current workflow returns to stable FBAudioFix 0.3.20 and requires a fresh Triple-Tweak CI run.** No assumption is made that every individual hook or legacy deep-link alias is validated.
+**Status (2026-11-01):** The release-driven pipeline has successfully produced **Facebook 585.0.0 + Facebook Plus v1.0.3-1**, with stable FBAudioFix 0.3.20, standalone ShopeeBlocker, the Safari **Open in Facebook** extension, and Files sharing enabled (`UIFileSharingEnabled` and `LSSupportsOpeningDocumentsInPlace`). The user confirmed successful on-device testing of link routing, background audio, Story/Reels downloads, and Files visibility on the pre-release build. Facebook Plus Rootless/Rootfull/RootHide DEBs were also built and published separately. This does not imply every hook or every iOS configuration has been tested.\n\n**Sync Feather Source:** After the IPA release is published, run [Sync Feather Source](https://github.com/ttlongdl/Facebook-IPA-Patcher/actions/workflows/sync-feather-source.yml) on `main`. It selects the latest published non-prerelease `fb-*` release, updates the Facebook entry in [`ttlongdl/feather/personal-source.json`](https://github.com/ttlongdl/feather/blob/main/personal-source.json), preserves other apps, and verifies the remote update. The repository secret `SOURCE_REPO_TOKEN` must have **Contents: read/write** access to `ttlongdl/feather`. IPA build and Feather sync remain separate manual workflows.
 
 ## Legacy files
 
