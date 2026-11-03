@@ -36,7 +36,12 @@ jobs:
           ASSET_URL="$(jq -er '.browser_download_url' <<< "$ASSET")"
           ASSET_SIZE="$(jq -er '.size | select(. > 0)' <<< "$ASSET")"
           ASSET_NAME="$(jq -er '.name' <<< "$ASSET")"
-          test "$ASSET_NAME" = "FB ${FB_VERSION} Plus v${PLUS_VERSION}.ipa" || { echo "::error::Unexpected IPA filename: $ASSET_NAME"; exit 1; }
+          EXPECTED_SPACED="FB ${FB_VERSION} Plus v${PLUS_VERSION}.ipa"
+          EXPECTED_DOTTED="FB.${FB_VERSION}.Plus.v${PLUS_VERSION}.ipa"
+          if [[ "$ASSET_NAME" != "$EXPECTED_SPACED" && "$ASSET_NAME" != "$EXPECTED_DOTTED" ]]; then
+            echo "::error::Unexpected IPA filename: $ASSET_NAME (expected $EXPECTED_SPACED or $EXPECTED_DOTTED)"
+            exit 1
+          fi
           RELEASE_DATE="$(jq -er '.published_at' <<< "$RELEASE_JSON")"
           RELEASE_BODY="$(jq -r '.body // ""' <<< "$RELEASE_JSON")"
           echo "version=$FB_VERSION" >> "$GITHUB_OUTPUT"
