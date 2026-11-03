@@ -24,12 +24,19 @@ jobs:
           fi
           FB_VERSION="${BASH_REMATCH[1]}"
           PLUS_VERSION="${BASH_REMATCH[2]}"
+          # Do not overwrite Feather with an older IPA release or a different FBPlus version.
+          EXPECTED_PLUS_VERSION="1.0.4-1"
+          test "$PLUS_VERSION" = "$EXPECTED_PLUS_VERSION" || { echo "::error::Latest IPA uses FBPlus $PLUS_VERSION, expected $EXPECTED_PLUS_VERSION. Build the new IPA first."; exit 1; }
+          DEB_TAG="$(gh api repos/ttlongdl/Facebook-Plus/releases/latest --jq '.tag_name')"
+          test "$DEB_TAG" = "v$PLUS_VERSION" || { echo "::error::FBPlus latest DEB release $DEB_TAG disagrees with IPA $PLUS_VERSION"; exit 1; }
           SHOPEE_VERSION="${BASH_REMATCH[4]:-}"
           TRIPLE_TWEAK=false
           if [[ "$TAG" == *-triple-build-* ]]; then TRIPLE_TWEAK=true; fi
           ASSET="$(jq -e '[.assets[] | select(.name | endswith(".ipa"))] | if length == 1 then .[0] else error("Expected exactly one IPA asset") end' <<< "$RELEASE_JSON")"
           ASSET_URL="$(jq -er '.browser_download_url' <<< "$ASSET")"
           ASSET_SIZE="$(jq -er '.size | select(. > 0)' <<< "$ASSET")"
+          ASSET_NAME="$(jq -er '.name' <<< "$ASSET")"
+          test "$ASSET_NAME" = "FB ${FB_VERSION} Plus v${PLUS_VERSION}.ipa" || { echo "::error::Unexpected IPA filename: $ASSET_NAME"; exit 1; }
           RELEASE_DATE="$(jq -er '.published_at' <<< "$RELEASE_JSON")"
           RELEASE_BODY="$(jq -r '.body // ""' <<< "$RELEASE_JSON")"
           echo "version=$FB_VERSION" >> "$GITHUB_OUTPUT"
