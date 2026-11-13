@@ -16,19 +16,27 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          RELEASE_JSON="$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" | jq -e '[.[] | select(.draft == false and .prerelease == false and (.tag_name | startswith("fb-")))] | first // error("No published Facebook Plus release found")')"
+          # Select the newest published, non-draft, non-prerelease IPA release.
+          # Do not assume that the first API result is the newest by publication time.
+          RELEASE_JSON="$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" | jq -s -e '
+            [ .[][] |
+              select(.draft == false and .prerelease == false) |
+              select(.tag_name | test("^fb-.+-plus-v[0-9]+\\.[0-9]+\\.[0-9]+-[0-9]+(-triple-build-[0-9]+|-shopee-v[0-9]+\\.[0-9]+\\.[0-9]+-build-[0-9]+)?$")) |
+              select([.assets[] | select(.name | endswith(".ipa"))] | length == 1)
+            ] | sort_by(.published_at, .created_at, .id) | last // error("No eligible published Facebook IPA release found")
+          ')"
           TAG="$(jq -r '.tag_name' <<< "$RELEASE_JSON")"
-          if [[ ! "$TAG" =~ ^fb-(.+)-plus-v([0-9]+\.[0-9]+\.[0-9]+-[0-9]+)(-triple-build-[0-9]+|-shopee-v([0-9]+\.[0-9]+\.[0-9]+)-build-[0-9]+)?$ ]]; then
+          if [[ ! "$TAG" =~ ^fb-(.+)-plus-v([0-9]+\\.[0-9]+\\.[0-9]+-[0-9]+)(-triple-build-[0-9]+|-shopee-v([0-9]+\\.[0-9]+\\.[0-9]+)-build-[0-9]+)?$ ]]; then
             echo "::error::Unexpected release tag: $TAG"
             exit 1
           fi
           FB_VERSION="${BASH_REMATCH[1]}"
           PLUS_VERSION="${BASH_REMATCH[2]}"
-          # Do not overwrite Feather with an older IPA release or a different FBPlus version.
-          EXPECTED_PLUS_VERSION="1.0.4-1"
-          test "$PLUS_VERSION" = "$EXPECTED_PLUS_VERSION" || { echo "::error::Latest IPA uses FBPlus $PLUS_VERSION, expected $EXPECTED_PLUS_VERSION. Build the new IPA first."; exit 1; }
-          DEB_TAG="$(gh api repos/ttlongdl/Facebook-Plus/releases/latest --jq '.tag_name')"
-          test "$DEB_TAG" = "v$PLUS_VERSION" || { echo "::error::FBPlus latest DEB release $DEB_TAG disagrees with IPA $PLUS_VERSION"; exit 1; }
+          # Verify matching FBPlus release exists, without pinning a fixed version.
+          gh api "repos/ttlongdl/Facebook-Plus/releases/tags/v${PLUS_VERSION}" --jq '.tag_name' | grep -Fx "v${PLUS_VERSION}" >/dev/null || {
+            echo "::error::FBPlus v${PLUS_VERSION} is not published"
+            exit 1
+          }
           SHOPEE_VERSION="${BASH_REMATCH[4]:-}"
           TRIPLE_TWEAK=false
           if [[ "$TAG" == *-triple-build-* ]]; then TRIPLE_TWEAK=true; fi
@@ -44,6 +52,8 @@ jobs:
           fi
           RELEASE_DATE="$(jq -er '.published_at' <<< "$RELEASE_JSON")"
           RELEASE_BODY="$(jq -r '.body // ""' <<< "$RELEASE_JSON")"
+          RELEASE_ID="$(jq -er '.id' <<< "$RELEASE_JSON")"
+          echo "Selected latest published IPA release $TAG (release id $RELEASE_ID)"
           echo "version=$FB_VERSION" >> "$GITHUB_OUTPUT"
           echo "plus=$PLUS_VERSION" >> "$GITHUB_OUTPUT"
           echo "shopee=$SHOPEE_VERSION" >> "$GITHUB_OUTPUT"
@@ -107,6 +117,18 @@ jobs:
             end
           ' "$WORK/source.json" > "$WORK/updated.json"
           jq -e '.apps | length > 0' "$WORK/updated.json" >/dev/null
+          # Avoid reverting Feather to an older previously-synced release.
+          CURRENT_RELEASE_DATE="$(jq -r '.apps[] | select(.bundleIdentifier == "com.facebook.Facebook") | .versionDate // ""' "$WORK/source.json")"
+          if [[ -n "$CURRENT_RELEASE_DATE" && "$RELEASE_DATE" < "$CURRENT_RELEASE_DATE" ]]; then
+            echo "::error::Refusing rollback: selected IPA release $RELEASE_DATE precedes Feather $CURRENT_RELEASE_DATE"
+            exit 1
+          fi
+          # Same release URL already published: succeed without a redundant commit.
+          CURRENT_URL="$(jq -r '.apps[] | select(.bundleIdentifier == "com.facebook.Facebook") | .downloadURL // ""' "$WORK/source.json")"
+          if [[ "$CURRENT_URL" == "$ASSET_URL" ]]; then
+            echo "Feather source already points to $ASSET_URL; nothing to update."
+            exit 0
+          fi
           SHA="$(jq -er '.sha' "$WORK/file.json")"
           CONTENT="$(base64 < "$WORK/updated.json" | tr -d '\n')"
           jq -n --arg message "Sync Facebook $FB_VERSION Plus v$PLUS_VERSION" --arg content "$CONTENT" --arg sha "$SHA" --arg branch main '{message:$message,content:$content,sha:$sha,branch:$branch}' > "$WORK/request.json"
