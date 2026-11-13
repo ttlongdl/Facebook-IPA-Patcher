@@ -21,7 +21,7 @@ jobs:
           RELEASE_JSON="$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" | jq -s -e '
             [ .[][] |
               select(.draft == false and .prerelease == false) |
-              select(.tag_name | test("^fb-.+-plus-v[0-9]+\\.[0-9]+\\.[0-9]+-[0-9]+(-triple-build-[0-9]+|-shopee-v[0-9]+\\.[0-9]+\\.[0-9]+-build-[0-9]+)?$")) |
+              select(.tag_name | test("^fb-.+-plus-v[0-9]+[.][0-9]+[.][0-9]+-[0-9]+(-triple-build-[0-9]+|-shopee-v[0-9]+[.][0-9]+[.][0-9]+-build-[0-9]+)?$")) |
               select([.assets[] | select(.name | endswith(".ipa"))] | length == 1)
             ] | sort_by(.published_at, .created_at, .id) | last // error("No eligible published Facebook IPA release found")
           ')"
