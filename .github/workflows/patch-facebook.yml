@@ -59,7 +59,6 @@ jobs:
           mkdir -p fbplus/packages
           gh release download "$FBPLUS_TAG" --repo ttlongdl/Facebook-Plus --pattern "Facebook-Plus-v${PLUS_VERSION}-rootless.deb" --pattern "FBPNotifyBridge.dylib" --dir fbplus/packages
           test -s "fbplus/packages/Facebook-Plus-v${PLUS_VERSION}-rootless.deb"
-          test "$(dpkg-deb -f "fbplus/packages/Facebook-Plus-v${PLUS_VERSION}-rootless.deb" Version)" = "$PLUS_VERSION"
           test -s fbplus/packages/FBPNotifyBridge.dylib
 
       - name: Download source IPA
@@ -84,6 +83,7 @@ jobs:
       - name: Install build tools
         run: |
           brew install ldid dpkg xz
+          test "$(dpkg-deb -f "fbplus/packages/Facebook-Plus-v${PLUS_VERSION}-rootless.deb" Version)" = "$PLUS_VERSION"
           git clone --quiet --recursive https://github.com/theos/theos.git "$THEOS"
           pipx install --force https://github.com/asdfzxcvbn/pyzule-rw/archive/main.zip
 
@@ -122,12 +122,7 @@ jobs:
           printf '%s\n' "${plugins[@]}" > fbplus/staging/extensions.txt
           logos=(fbplus/resources/logo/fbplus_*.png)
           if (( ${#logos[@]} > 0 )); then
-            python3 - <<'PY'
-            import sys
-            sys.path.insert(0, 'fbplus')
-            from build import Paths, IconPlist
-            IconPlist(Paths()).write('fbplus/test/com.facebook.Facebook.ipa', 'fbplus/staging/icon-merge.plist')
-            PY
+            python3 -c "import sys; sys.path.insert(0, 'fbplus'); from build import Paths, IconPlist; IconPlist(Paths()).write('fbplus/test/com.facebook.Facebook.ipa', 'fbplus/staging/icon-merge.plist')"
           fi
 
       - name: Inject three DEBs and Safari extension
