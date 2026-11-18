@@ -8,9 +8,9 @@ on:
         required: true
         type: string
       fbplus_tag:
-        description: 'Pinned Facebook Plus release tag'
+        description: 'Facebook Plus release tag (latest or vX.Y.Z)'
         required: true
-        default: 'v1.0.7'
+        default: 'latest'
         type: string
       bundle_id:
         description: 'Optional custom app bundle identifier'
@@ -39,11 +39,16 @@ jobs:
 
       - name: Checkout matching Facebook Plus release source
         env:
+          GH_TOKEN: ${{ github.token }}
           FBPLUS_TAG: ${{ inputs.fbplus_tag }}
         run: |
           set -euo pipefail
-          [[ "$FBPLUS_TAG" =~ ^v[0-9]+[.][0-9]+[.][0-9]+$ ]] || { echo "::error::Invalid release tag"; exit 1; }
+          if [[ "$FBPLUS_TAG" == "latest" ]]; then
+            FBPLUS_TAG="$(gh api repos/ttlongdl/Facebook-Plus/releases/latest --jq '.tag_name')"
+          fi
+          [[ "$FBPLUS_TAG" =~ ^v[0-9]+[.][0-9]+[.][0-9]+$ ]] || { echo "::error::Invalid release tag: $FBPLUS_TAG"; exit 1; }
           git clone --quiet --recursive https://github.com/ttlongdl/Facebook-Plus.git fbplus
+          git -C fbplus fetch --tags --force
           git -C fbplus checkout --detach "$FBPLUS_TAG"
           git -C fbplus submodule update --init --recursive
           VERSION="$(awk -F': ' '/^Version:/{print $2; exit}' fbplus/control)"
